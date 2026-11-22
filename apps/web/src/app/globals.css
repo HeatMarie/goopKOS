@@ -2,8 +2,8 @@
 :root {
   /* Neon night: indigo sky, magenta + cyan tubes, ramen-sign orange. */
   --bg: #07061a;
-  --panel: #0d0b24;
-  --raised: #13102e;
+  --panel: rgba(13, 11, 36, 0.80);
+  --raised: rgba(19, 16, 46, 0.74);
   --field: #161337;
   --field-line: #2f2961;
   --line: #2a2452;
@@ -34,9 +34,15 @@
 html, body {
   margin: 0;
   padding: 0;
+  /* The night-city art shows through at the top and fades out behind the
+     table so text stays readable. */
   background:
-    radial-gradient(1100px 520px at 0% -8%, rgba(255, 47, 180, 0.16), transparent 62%),
-    radial-gradient(900px 480px at 100% -4%, rgba(45, 226, 255, 0.12), transparent 60%),
+    linear-gradient(180deg,
+      rgba(7, 6, 26, 0.45) 0%,
+      rgba(7, 6, 26, 0.78) 30%,
+      rgba(7, 6, 26, 0.93) 60%,
+      var(--bg) 100%),
+    url("/night-city.jpg") center top / cover no-repeat,
     var(--bg);
   background-attachment: fixed;
   color: var(--text);

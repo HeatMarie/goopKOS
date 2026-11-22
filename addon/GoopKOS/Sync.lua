@@ -7,7 +7,7 @@ local ADDON_NAME, KOS = ...
 
 local PREFIX       = "GOOPKOS"
 local CHANNEL      = "goopkos"
-local PASSWORD     = "changeme"   -- same string for everyone in the group
+local PASSWORD     = "gank-club-5922"   -- same for everyone; ships in the download zip
 local JOIN_DELAY   = 5            -- seconds after login; lets General/Trade take their numbers first
 local SEND_EVERY   = 0.25         -- throttle, or the server disconnects you
 local FIELDS = { "clientId", "name", "class", "level", "kind", "note", "zone", "occurredAt", "reportedBy" }
@@ -99,22 +99,6 @@ function KOS:SyncChannel()
   return channelIndex()
 end
 
---- One test whisper to yourself. For /kos ping: checks whether WHISPER
---- addon messages get through, since CHANNEL ones are forbidden here.
-function KOS:Ping()
-  -- Whispers need the surname, but maybe not with a plain space; try both.
-  local full = KOS.FullName("player")
-  local linked = C_NameUtil and C_NameUtil.ReplaceSurnameSeparatorWithLinkSeparator
-    and C_NameUtil.ReplaceSurnameSeparatorWithLinkSeparator(full) or full
-  local lines = {}
-  for label, target in pairs({ A = full, B = linked }) do
-    local ok, res = pcall(C_ChatInfo.SendAddonMessage, PREFIX, "v1\tPING\t" .. label, "WHISPER", target)
-    lines[#lines + 1] = label .. " to [" .. tostring(target) .. "]: " .. (ok and tostring(res) or ("error " .. tostring(res)))
-  end
-  table.sort(lines)
-  return table.concat(lines, "  |  ")
-end
-
 --- Send one new incident to everyone online.
 function KOS:Broadcast(entry)
   enqueue("v1\tNEW\t" .. serialize(entry))
@@ -156,10 +140,6 @@ f:SetScript("OnEvent", function(_, event, ...)
   elseif event == "CHAT_MSG_ADDON" then
     local prefix, text, _, sender = ...
     if prefix ~= PREFIX then return end
-    if text:sub(1, 8) == "v1\tPING\t" then
-      print("|cffff7a18KOS|r ping " .. text:sub(9) .. " received from [" .. tostring(sender) .. "]")
-      return
-    end
     if sender then
       local who = Ambiguate(sender, "none")
       if who == UnitName("player") or who == KOS.FullName("player") then return end

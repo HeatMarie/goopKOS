@@ -252,47 +252,6 @@ SlashCmdList.GOOPKOS = function(msg)
     return
   end
 
-  if msg == "announce" then
-    KOS:AnnounceFull()
-    return
-  end
-
-  -- Forever has surnames; find which API returns them.
-  if msg == "names" then
-    for _, u in ipairs({ "player", "target" }) do
-      if UnitExists(u) then
-        print("|cffff7a18KOS|r " .. u
-          .. " | UnitName: " .. tostring((UnitName(u)))
-          .. " | GetUnitName: " .. tostring(GetUnitName and GetUnitName(u, true))
-          .. " | UnitFullName: " .. tostring(UnitFullName and (UnitFullName(u)))
-          .. " | Unmodified: " .. tostring(UnitNameUnmodified and (UnitNameUnmodified(u))))
-      end
-    end
-    local found = {}
-    for k, v in pairs(_G) do
-      if type(k) == "string" and type(v) ~= "table" and (k:lower():find("surname") or k:lower():find("lastname")) then
-        found[#found + 1] = k
-      end
-    end
-    for k, v in pairs(_G) do
-      if type(k) == "string" and k:sub(1, 2) == "C_" and type(v) == "table" then
-        for fk in pairs(v) do
-          if type(fk) == "string" and (fk:lower():find("surname") or fk:lower():find("lastname")) then
-            found[#found + 1] = k .. "." .. fk
-          end
-        end
-      end
-    end
-    table.sort(found)
-    print("|cffff7a18KOS|r surname APIs: " .. (#found > 0 and table.concat(found, ", ") or "none found"))
-    return
-  end
-
-  if msg == "ping" then
-    print("|cffff7a18KOS|r ping result: " .. KOS:Ping())
-    return
-  end
-
   if msg == "status" then
     local channel = KOS.SyncChannel and KOS:SyncChannel()
     print("|cffff7a18KOS|r incidents: " .. #GoopKOSDB.incidents

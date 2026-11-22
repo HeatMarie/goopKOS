@@ -51,14 +51,16 @@ World of Warcraft\_forever_\Interface\AddOns\GoopKOS\
 Forever may share retail's AddOns directory — if the addon does not appear at
 character select, try `_retail_\Interface\AddOns\` instead.
 
-Two things to edit before handing it to anyone:
+`GoopKOS.toc` is set to `## Interface: 16001`, matching Forever. The sync
+`PASSWORD` in `Sync.lua` is shared by everyone, so it ships inside the zip.
 
-- `GoopKOS.toc` — set `## Interface:` to match a Forever addon you already have
-  working. The value in there is a guess.
-- `Sync.lua` — change `PASSWORD` from `changeme`. Everyone in the group uses
-  the same string; it is what keeps the channel yours.
+Friends get the addon from the **Get the addon** button on the list page,
+which serves `apps/web/public/GoopKOS.zip` with install steps. After changing
+anything in `addon/GoopKOS`, rebuild the zip (Windows) and commit it:
 
-Then zip the folder and send it to your friends. That is their entire install.
+```bash
+pnpm addon:zip
+```
 
 ### 4. Watcher
 

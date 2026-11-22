@@ -41,6 +41,18 @@ function discordSdk(): Promise<DiscordSDK | null> {
   return sdkPromise;
 }
 
+/**
+ * Open a URL in the viewer's real browser when inside Discord (the Activity
+ * frame can't download files itself). Returns false outside Discord, so the
+ * caller falls back to a normal link.
+ */
+export async function openExternal(url: string): Promise<boolean> {
+  const sdk = await discordSdk();
+  if (!sdk) return false;
+  await sdk.commands.openExternalLink({ url });
+  return true;
+}
+
 function describe(err: unknown): string {
   if (err instanceof Error) return err.message;
   if (err && typeof err === "object" && "message" in err) return String((err as { message: unknown }).message);

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import type { Target } from "@goopkos/core";
 import { classColor, className } from "@/lib/classes";
 import { AddTarget, RemoveTarget } from "@/components/AddTarget";
+import { GetAddon } from "@/components/GetAddon";
 
 type Filter = "all" | "active" | "retired";
 
@@ -22,6 +23,7 @@ export function KosList({ targets }: { targets: Target[] }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [adding, setAdding] = useState(false);
+  const [gettingAddon, setGettingAddon] = useState(false);
 
   const maxKills = useMemo(
     () => Math.max(1, ...targets.map((t) => t.kills)),
@@ -109,6 +111,20 @@ export function KosList({ targets }: { targets: Target[] }) {
           </div>
           <button
             type="button"
+            onClick={() => setGettingAddon((g) => !g)}
+            aria-expanded={gettingAddon}
+            style={{
+              flex: "0 0 auto", background: gettingAddon ? "var(--field)" : "transparent",
+              border: "1px solid var(--accent-2)", color: "var(--accent-2)",
+              borderRadius: 6, fontFamily: "var(--body)", fontSize: 13.5, fontWeight: 600,
+              padding: "0 16px", cursor: "pointer", whiteSpace: "nowrap",
+              boxShadow: gettingAddon ? "none" : "var(--glow-2)",
+            }}
+          >
+            Get the addon
+          </button>
+          <button
+            type="button"
             onClick={() => setAdding((a) => !a)}
             aria-expanded={adding}
             style={{
@@ -124,6 +140,7 @@ export function KosList({ targets }: { targets: Target[] }) {
         </div>
       </header>
 
+      {gettingAddon && <GetAddon onClose={() => setGettingAddon(false)} />}
       {adding && <AddTarget onClose={() => setAdding(false)} />}
 
       <section style={{ display: "flex", flexDirection: "column", gap: 14 }}>
