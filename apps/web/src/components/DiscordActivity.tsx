@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { DiscordSDK } from "@discord/embedded-app-sdk";
 
 const REFRESH_MS = 60_000;
+const PIP = 1; // LayoutModeTypeObject.PIP: the floating bubble
 
 let sdkPromise: Promise<DiscordSDK | null> | null = null;
 let namePromise: Promise<DiscordName> | null = null;
@@ -31,9 +32,17 @@ function discordSdk(): Promise<DiscordSDK | null> {
       if (inDiscord()) console.error("[activity] NEXT_PUBLIC_DISCORD_CLIENT_ID is not set");
       sdkPromise = Promise.resolve(null);
     } else {
-      sdkPromise = import("@discord/embedded-app-sdk").then(async ({ DiscordSDK }) => {
+      sdkPromise = import("@discord/embedded-app-sdk").then(async ({ DiscordSDK, RPCCloseCodes }) => {
         const sdk = new DiscordSDK(clientId);
         await sdk.ready();
+        // Leaving the channel makes Discord shrink the Activity into a
+        // floating picture-in-picture bubble. Nobody needs the list hovering
+        // over other channels, so close instead; Launch brings it back.
+        await sdk
+          .subscribe("ACTIVITY_LAYOUT_MODE_UPDATE", ({ layout_mode }) => {
+            if (layout_mode === PIP) sdk.close(RPCCloseCodes.CLOSE_NORMAL, "Closed when minimized");
+          })
+          .catch((err) => console.error("[activity] layout subscribe failed", err));
         return sdk;
       });
     }
