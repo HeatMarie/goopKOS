@@ -15,6 +15,12 @@ function makePool(): Pool {
   });
 }
 
-/** One pool per process, kept across hot reloads in dev. */
-export const pool: Pool = globalThis.__kosPool ?? makePool();
-if (process.env.NODE_ENV !== "production") globalThis.__kosPool = pool;
+/**
+ * One pool per process, kept across hot reloads in dev. Created on first use,
+ * not at import: `next build` imports every route, and on Vercel the build
+ * can run before DATABASE_URL exists.
+ */
+export function db(): Pool {
+  if (!globalThis.__kosPool) globalThis.__kosPool = makePool();
+  return globalThis.__kosPool;
+}

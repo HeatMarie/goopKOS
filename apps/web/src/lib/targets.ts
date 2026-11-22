@@ -1,4 +1,4 @@
-import { pool } from "@/lib/db";
+import { db } from "@/lib/db";
 import type { Target } from "@goopkos/core";
 
 interface Row {
@@ -19,7 +19,7 @@ interface Row {
 }
 
 export async function listTargets(): Promise<Target[]> {
-  const res = await pool.query<Row>(
+  const res = await db().query<Row>(
     `select
        t.id, t.name, t.name_key, t.class, t.level, t.status,
        t.first_seen_at, t.last_seen_at,

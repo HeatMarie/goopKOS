@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { validateIncident, nameKey, type IngestResult } from "@goopkos/core";
-import { pool } from "@/lib/db";
+import { db } from "@/lib/db";
 import { isAuthorized } from "@/lib/auth";
 
 export const runtime = "nodejs";
@@ -35,7 +35,7 @@ export async function POST(req: Request): Promise<NextResponse> {
     rejected: [],
   };
 
-  const client = await pool.connect();
+  const client = await db().connect();
   try {
     await client.query("begin");
 
@@ -112,7 +112,7 @@ export async function GET(req: Request): Promise<NextResponse> {
   }
 
   const since = Number(new URL(req.url).searchParams.get("since") ?? 0);
-  const res = await pool.query<{ client_id: string }>(
+  const res = await db().query<{ client_id: string }>(
     Number.isFinite(since) && since > 0
       ? `select client_id from kos_incident where occurred_at >= to_timestamp($1)`
       : `select client_id from kos_incident`,
