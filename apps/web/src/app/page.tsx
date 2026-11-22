@@ -17,7 +17,7 @@ export default async function Page() {
     <main style={{ minHeight: "100vh", padding: "32px 28px 56px" }}>
       <div style={{ maxWidth: 1304, margin: "0 auto" }}>
         {error ? (
-          <p style={{ color: "#e24b4a", fontFamily: "var(--mono)", fontSize: 13 }}>
+          <p style={{ color: "var(--danger)", fontFamily: "var(--mono)", fontSize: 13 }}>
             {error}
           </p>
         ) : (

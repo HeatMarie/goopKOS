@@ -47,7 +47,7 @@ export function KosList({ targets }: { targets: Target[] }) {
     [targets],
   );
 
-  const rankColor = ["var(--accent)", "#c9ccd3", "#8a6a4a"];
+  const rankColor = ["var(--accent)", "var(--accent-2)", "var(--accent-3)"];
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
@@ -59,7 +59,8 @@ export function KosList({ targets }: { targets: Target[] }) {
       >
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <svg width="34" height="34" viewBox="0 0 24 24" fill="none"
-               stroke="var(--accent)" strokeWidth="1.6" aria-hidden="true">
+               stroke="var(--accent)" strokeWidth="1.6" aria-hidden="true"
+               style={{ filter: "drop-shadow(0 0 6px rgba(255, 47, 180, 0.7))" }}>
             <circle cx="12" cy="12" r="8.2" />
             <path d="M12 1.6v5M12 17.4v5M1.6 12h5M17.4 12h5" />
             <circle cx="12" cy="12" r="2.1" fill="var(--accent)" stroke="none" />
@@ -67,13 +68,15 @@ export function KosList({ targets }: { targets: Target[] }) {
           <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
             <h1 style={{
               margin: 0, fontFamily: "var(--display)", fontSize: 23, fontWeight: 700,
-              letterSpacing: "0.12em", textTransform: "uppercase",
+              letterSpacing: "0.12em", textTransform: "uppercase", color: "#ffe3f6",
+              textShadow: "0 0 6px rgba(255, 47, 180, 0.9), 0 0 18px rgba(255, 47, 180, 0.55)",
             }}>
               Kill on Sight
             </h1>
             <span style={{
               fontFamily: "var(--mono)", fontSize: 11, letterSpacing: "0.14em",
-              textTransform: "uppercase", color: "var(--muted)",
+              textTransform: "uppercase", color: "var(--accent-2)",
+              textShadow: "0 0 8px rgba(45, 226, 255, 0.6)",
             }}>
               In Goop We Trust
             </span>
@@ -98,7 +101,7 @@ export function KosList({ targets }: { targets: Target[] }) {
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search name, zone, or reason"
               style={{
-                width: "100%", background: "var(--field)", border: "1px solid #23262e",
+                width: "100%", background: "var(--field)", border: "1px solid var(--field-line)",
                 borderRadius: 6, color: "var(--text)", fontFamily: "var(--body)",
                 fontSize: 14, padding: "11px 14px 11px 40px", outline: "none",
               }}
@@ -113,6 +116,7 @@ export function KosList({ targets }: { targets: Target[] }) {
               border: "1px solid var(--accent)", color: adding ? "var(--accent)" : "var(--accent-ink)",
               borderRadius: 6, fontFamily: "var(--body)", fontSize: 13.5, fontWeight: 600,
               padding: "0 16px", cursor: "pointer", whiteSpace: "nowrap",
+              boxShadow: adding ? "none" : "var(--glow)",
             }}
           >
             {adding ? "Close" : "+ Add to KOS"}
@@ -124,8 +128,8 @@ export function KosList({ targets }: { targets: Target[] }) {
 
       <section style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
-          <h2 className="micro" style={{ margin: 0 }}>Most wanted</h2>
-          <span style={{ flex: 1, height: 1, background: "var(--line)" }} />
+          <h2 className="micro" style={{ margin: 0, color: "var(--accent-2)" }}>Most wanted</h2>
+          <span style={{ flex: 1, height: 1, background: "linear-gradient(90deg, var(--accent-2), transparent)", opacity: 0.5 }} />
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 14 }}>
           {wanted.map((t, i) => (
@@ -134,6 +138,7 @@ export function KosList({ targets }: { targets: Target[] }) {
               border: "1px solid var(--line)", borderLeft: `3px solid ${rankColor[i]}`,
               borderRadius: 7, padding: "18px 20px",
               display: "flex", flexDirection: "column", gap: 12,
+              boxShadow: `-6px 0 22px -12px ${rankColor[i]}`,
             }}>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
                 <span style={{
@@ -200,7 +205,7 @@ export function KosList({ targets }: { targets: Target[] }) {
                 onClick={() => setFilter(f.id)}
                 style={{
                   background: on ? "var(--accent)" : "var(--field)",
-                  border: `1px solid ${on ? "var(--accent)" : "#23262e"}`,
+                  border: `1px solid ${on ? "var(--accent)" : "var(--field-line)"}`,
                   color: on ? "var(--accent-ink)" : "var(--text-2)",
                   borderRadius: 6, fontFamily: "var(--body)", fontSize: 12.5,
                   fontWeight: on ? 600 : 500, padding: "8px 15px", cursor: "pointer",
@@ -260,16 +265,17 @@ export function KosList({ targets }: { targets: Target[] }) {
                     <span style={{ fontFamily: "var(--mono)", fontSize: 14, fontWeight: 600, fontVariantNumeric: "tabular-nums", minWidth: 14 }}>
                       {t.kills}
                     </span>
-                    <span style={{ display: "block", width: 56, height: 4, borderRadius: 2, background: "#22252d", overflow: "hidden" }}>
+                    <span style={{ display: "block", width: 56, height: 4, borderRadius: 2, background: "var(--track)", overflow: "hidden" }}>
                       <span style={{
                         display: "block", height: "100%",
                         width: `${Math.round((t.kills / maxKills) * 100)}%`,
-                        background: "var(--accent)", borderRadius: 2,
+                        background: "linear-gradient(90deg, var(--accent), var(--accent-3))", borderRadius: 2,
+                        boxShadow: "0 0 6px rgba(255, 47, 180, 0.6)",
                       }} />
                     </span>
                   </div>
                 </td>
-                <td style={{ padding: "15px 16px", fontSize: 13.5, color: "#b4b8c1", lineHeight: 1.5, minWidth: 300 }}>
+                <td style={{ padding: "15px 16px", fontSize: 13.5, color: "var(--text-2)", lineHeight: 1.5, minWidth: 300 }}>
                   {t.lastNote ?? <span style={{ color: "var(--dim)" }}>No reason recorded</span>}
                 </td>
                 <td style={{ padding: "15px 20px", whiteSpace: "nowrap" }}>

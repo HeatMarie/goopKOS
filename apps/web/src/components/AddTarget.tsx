@@ -24,7 +24,7 @@ function saveName(name: string): void {
 }
 
 const field: React.CSSProperties = {
-  width: "100%", background: "var(--field)", border: "1px solid #23262e",
+  width: "100%", background: "var(--field)", border: "1px solid var(--field-line)",
   borderRadius: 6, color: "var(--text)", fontFamily: "var(--body)",
   fontSize: 14, padding: "10px 12px", outline: "none",
 };
@@ -159,12 +159,12 @@ export function AddTarget({ onClose }: { onClose: () => void }) {
           {saving ? "Adding…" : "Add to KOS"}
         </button>
         <button type="button" onClick={onClose} disabled={saving} style={{
-          background: "transparent", border: "1px solid #23262e", color: "var(--text-2)",
+          background: "transparent", border: "1px solid var(--field-line)", color: "var(--text-2)",
           borderRadius: 6, fontFamily: "var(--body)", fontSize: 13, padding: "9px 16px", cursor: "pointer",
         }}>
           Cancel
         </button>
-        {error && <span role="alert" style={{ fontSize: 13, color: "#e24b4a" }}>{error}</span>}
+        {error && <span role="alert" style={{ fontSize: 13, color: "var(--danger)" }}>{error}</span>}
       </div>
     </form>
   );
@@ -205,9 +205,9 @@ export function RemoveTarget({ id, name }: { id: string; name: string }) {
       aria-label={armed ? `Confirm removing ${name}` : `Remove ${name} from the list`}
       title={armed ? "Click again to remove for good" : "Remove from the list"}
       style={{
-        background: armed ? "#3a1414" : "transparent",
-        border: `1px solid ${armed ? "#e24b4a" : "#23262e"}`,
-        color: armed ? "#ff8a89" : "var(--dim)",
+        background: armed ? "var(--danger-bg)" : "transparent",
+        border: `1px solid ${armed ? "var(--danger)" : "var(--field-line)"}`,
+        color: armed ? "var(--danger-ink)" : "var(--dim)",
         borderRadius: 6, fontFamily: "var(--body)", fontSize: 12, fontWeight: armed ? 600 : 500,
         padding: "5px 10px", cursor: busy ? "wait" : "pointer", whiteSpace: "nowrap",
       }}
