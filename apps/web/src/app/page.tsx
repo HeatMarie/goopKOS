@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { listTargets } from "@/lib/targets";
 import { KosList } from "@/components/KosList";
 
@@ -23,6 +24,13 @@ export default async function Page() {
         ) : (
           <KosList targets={targets} />
         )}
+        <footer style={{
+          marginTop: 40, display: "flex", gap: 16, justifyContent: "center",
+          fontFamily: "var(--mono)", fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase",
+        }}>
+          <Link href="/terms" style={{ color: "var(--muted)" }}>Terms</Link>
+          <Link href="/privacy" style={{ color: "var(--muted)" }}>Privacy</Link>
+        </footer>
       </div>
     </main>
   );
