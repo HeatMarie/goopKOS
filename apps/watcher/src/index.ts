@@ -1,10 +1,11 @@
-import { readFileSync, writeFileSync, existsSync, statSync, mkdirSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { readFileSync, writeFileSync, existsSync, statSync, mkdirSync, renameSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   parseSavedVariables,
   readIncidents,
   validateIncident,
+  webDataLua,
   KosClient,
   KosApiError,
   LuaParseError,
@@ -16,6 +17,25 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const STATE_PATH = join(HERE, "..", "watcher-state.json");
 const PRUNE_AFTER_DAYS = 90;
 const SETTLE_MS = 1500;
+const WEBDATA = "WebData.lua";
+
+/**
+ * The installed addon folder, where WebData.lua goes. Derived from the
+ * SavedVariables path: <game>\WTF\Account\<acct>\SavedVariables\GoopKOS.lua
+ * sits four levels below <game>, and the addon is <game>\Interface\AddOns\
+ * GoopKOS. GOOPKOS_ADDON_DIR overrides it. Null if it isn't there.
+ */
+function resolveAddonDir(savedVars: string): string | null {
+  const dir =
+    process.env.GOOPKOS_ADDON_DIR ||
+    resolve(dirname(savedVars), "..", "..", "..", "..", "Interface", "AddOns", "GoopKOS");
+  return existsSync(join(dir, "GoopKOS.toc")) ? dir : null;
+}
+
+/** WebData.lua minus its timestamp, to tell whether a rewrite changes anything. */
+function webDataBody(lua: string): string {
+  return lua.replace(/generatedAt = \d+/, "");
+}
 
 interface State {
   /** clientId -> the incident's occurredAt, so old ids can be pruned. */
@@ -152,8 +172,43 @@ async function main(): Promise<void> {
     }
   }
 
+  // Site -> game: every so often, write recent incidents from the website and
+  // Discord into WebData.lua, which the addon merges by clientId at load.
+  const addonDir = resolveAddonDir(savedVars);
+  const pullMs = Number(process.env.GOOPKOS_PULL_MS ?? 60_000);
+  let lastWebData = "";
+  if (addonDir) {
+    try {
+      lastWebData = webDataBody(readFileSync(join(addonDir, WEBDATA), "utf8"));
+    } catch {
+      /* first run: no file yet */
+    }
+  } else {
+    console.warn("[kos] addon folder not found next to the saved file; site -> game is off.");
+    console.warn("      Set GOOPKOS_ADDON_DIR in .env to the AddOns\\GoopKOS folder to turn it on.");
+  }
+
+  async function pull(): Promise<void> {
+    if (!addonDir) return;
+    try {
+      const { generatedAt, incidents } = await client.exportIncidents();
+      const { lua, count } = webDataLua(incidents, generatedAt);
+      if (webDataBody(lua) === lastWebData) return;
+      const target = join(addonDir, WEBDATA);
+      writeFileSync(target + ".tmp", lua, "utf8");
+      renameSync(target + ".tmp", target);
+      lastWebData = webDataBody(lua);
+      console.log(`[kos] site -> game: ${count} incident(s) in ${WEBDATA}. /reload in game to load them.`);
+    } catch (err) {
+      const msg = err instanceof KosApiError ? `api error ${err.status}: ${err.message}` : err instanceof Error ? err.message : String(err);
+      console.error(`[kos] site -> game failed: ${msg}`);
+    }
+  }
+
   lastSignature = signature();
   await sync("startup");
+  await pull();
+  setInterval(() => void pull(), pullMs);
 
   let settleTimer: NodeJS.Timeout | null = null;
   setInterval(() => {
@@ -166,6 +221,7 @@ async function main(): Promise<void> {
   }, pollMs);
 
   console.log(`[kos] watching every ${pollMs}ms. Ctrl+C to stop.`);
+  if (addonDir) console.log(`[kos] site -> game every ${pullMs / 1000}s into ${join(addonDir, WEBDATA)}`);
 }
 
 main().catch((err) => {

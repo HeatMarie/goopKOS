@@ -194,6 +194,22 @@ f:SetScript("OnEvent", function(_, event, arg1)
     GoopKOSDB.counter   = GoopKOSDB.counter or 0
     prune()
     KOS:ReindexIncidents()
+
+    -- Site -> game: WebData.lua (written by the watcher, loaded before this
+    -- file) carries web and Discord adds. Same clientId check as peer sync,
+    -- so anything already held is skipped.
+    local web = GoopKOSWebData and GoopKOSWebData.incidents
+    if type(web) == "table" then
+      local cutoff, added = time() - PRUNE_DAYS * 86400, 0
+      for _, entry in ipairs(web) do
+        if type(entry) == "table" and (entry.occurredAt or 0) >= cutoff and KOS:Merge(entry) then
+          added = added + 1
+        end
+      end
+      if added > 0 then
+        print("|cffff7a18KOS|r " .. added .. " new from the website")
+      end
+    end
   end
 end)
 

@@ -60,6 +60,11 @@ export class KosClient {
     });
   }
 
+  /** Recent incidents from every source, for writing into the game. */
+  async exportIncidents(): Promise<{ generatedAt: number; incidents: unknown[] }> {
+    return this.request("/api/export", { method: "GET" });
+  }
+
   /** Every clientId the server already holds, for reconciling after a gap. */
   async knownClientIds(since?: number): Promise<string[]> {
     const q = since ? `?since=${since}` : "";

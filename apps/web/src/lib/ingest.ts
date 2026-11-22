@@ -9,7 +9,7 @@ import { nameKey, type Incident } from "@goopkos/core";
 export async function insertIncident(
   client: PoolClient,
   incident: Incident,
-  source: "addon" | "web",
+  source: "addon" | "web" | "discord",
 ): Promise<boolean> {
   const targetRes = await client.query<{ id: string }>(
     `insert into kos_target (name, name_key, class, level, first_seen_at, last_seen_at)

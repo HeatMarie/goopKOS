@@ -90,6 +90,16 @@ Until everyone runs the addon, the list page (and the Discord Activity) has
 with the link, by choice. Inside Discord the "Your name" box fills itself from
 Discord once `DISCORD_CLIENT_SECRET` is set in Vercel.
 
+In Discord, `/kos add name: … why: …` adds someone and credits whoever typed
+it; `/kos check name: …` answers privately. Both autocomplete from the list.
+They need `DISCORD_PUBLIC_KEY` in Vercel, the Interactions Endpoint URL set to
+`https://goop-kos.vercel.app/api/discord/interactions`, and one
+`POST /api/discord/register` with a watcher key to register the command.
+
+Web and Discord adds reach the game through the watcher: every minute it
+writes the last 30 days into `AddOns\GoopKOS\WebData.lua`, and the addon
+merges anything new by clientId at login or `/reload`.
+
 Anyone on the list gets an orange `[KOS]` badge above their nameplate, which
 is the actual point — you never have to read the list while you play. The
 badge is its own frame on the base nameplate, so it shows with the default
