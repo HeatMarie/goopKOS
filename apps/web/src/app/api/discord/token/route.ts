@@ -37,8 +37,17 @@ export async function POST(req: Request): Promise<NextResponse> {
     }),
   });
   if (!res.ok) {
-    console.error("[discord token]", res.status, (await res.text()).slice(0, 300));
-    return NextResponse.json({ error: "token exchange failed" }, { status: 502 });
+    const text = await res.text();
+    console.error("[discord token]", res.status, text.slice(0, 300));
+    // Discord's error code is safe to pass on and says what broke:
+    // invalid_client = wrong secret or id, invalid_grant = bad/used code.
+    let reason = `discord ${res.status}`;
+    try {
+      reason = (JSON.parse(text) as { error?: string }).error ?? reason;
+    } catch {
+      /* not JSON */
+    }
+    return NextResponse.json({ error: `token exchange failed: ${reason}` }, { status: 502 });
   }
 
   const { access_token } = (await res.json()) as { access_token?: string };

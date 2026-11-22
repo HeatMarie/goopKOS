@@ -7,7 +7,13 @@ import type { DiscordSDK } from "@discord/embedded-app-sdk";
 const REFRESH_MS = 60_000;
 
 let sdkPromise: Promise<DiscordSDK | null> | null = null;
-let namePromise: Promise<string | null> | null = null;
+let namePromise: Promise<DiscordName> | null = null;
+
+/** name: the display name, or null. error: why not, when it should have worked. */
+export interface DiscordName {
+  name: string | null;
+  error: string | null;
+}
 
 function inDiscord(): boolean {
   return typeof window !== "undefined" && new URLSearchParams(window.location.search).has("frame_id");
@@ -35,40 +41,54 @@ function discordSdk(): Promise<DiscordSDK | null> {
   return sdkPromise;
 }
 
+function describe(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (err && typeof err === "object" && "message" in err) return String((err as { message: unknown }).message);
+  return String(err);
+}
+
 /**
- * The viewer's Discord display name, or null outside Discord or if they
- * decline. The first call shows Discord's "Authorize" prompt once; the code
- * it returns is swapped for a token server-side (/api/discord/token), since
- * that needs the client secret.
+ * The viewer's Discord display name. Outside Discord: { name: null, error:
+ * null }. The first call shows Discord's "Authorize" prompt once; the code it
+ * returns is swapped for a token server-side (/api/discord/token), since that
+ * needs the client secret. Any failure comes back as error, with the step.
  */
-export function discordName(): Promise<string | null> {
+export function discordName(): Promise<DiscordName> {
   if (!namePromise) {
-    namePromise = (async () => {
+    namePromise = (async (): Promise<DiscordName> => {
       const sdk = await discordSdk();
       const clientId = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID;
-      if (!sdk || !clientId) return null;
+      if (!sdk || !clientId) return { name: null, error: null };
 
-      const { code } = await sdk.commands.authorize({
-        client_id: clientId,
-        response_type: "code",
-        prompt: "none",
-        scope: ["identify"],
-      });
+      let code: string;
+      try {
+        ({ code } = await sdk.commands.authorize({
+          client_id: clientId,
+          response_type: "code",
+          prompt: "none",
+          scope: ["identify"],
+        }));
+      } catch (err) {
+        return { name: null, error: `authorize: ${describe(err)}` };
+      }
+
       const res = await fetch("/api/discord/token", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ code }),
       });
-      if (!res.ok) return null;
-      const { access_token } = (await res.json()) as { access_token?: string };
-      if (!access_token) return null;
+      const body = (await res.json().catch(() => ({}))) as { access_token?: string; error?: string };
+      if (!res.ok || !body.access_token) {
+        return { name: null, error: body.error ?? `token: HTTP ${res.status}` };
+      }
 
-      const { user } = await sdk.commands.authenticate({ access_token });
-      return user.global_name || user.username;
-    })().catch((err) => {
-      console.error("[activity] could not get Discord name", err);
-      return null;
-    });
+      try {
+        const { user } = await sdk.commands.authenticate({ access_token: body.access_token });
+        return { name: user.global_name || user.username, error: null };
+      } catch (err) {
+        return { name: null, error: `authenticate: ${describe(err)}` };
+      }
+    })().catch((err) => ({ name: null, error: describe(err) }));
   }
   return namePromise;
 }

@@ -49,13 +49,16 @@ export function AddTarget({ onClose }: { onClose: () => void }) {
   const [reporter, setReporter] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [nameIssue, setNameIssue] = useState<string | null>(null);
 
   // Remembered name first; inside Discord, the Discord name wins.
   useEffect(() => {
     setReporter(loadName());
     let live = true;
-    discordName().then((n) => {
-      if (live && n) setReporter(n);
+    discordName().then(({ name: n, error: why }) => {
+      if (!live) return;
+      if (n) setReporter(n);
+      setNameIssue(why);
     });
     return () => {
       live = false;
@@ -134,6 +137,11 @@ export function AddTarget({ onClose }: { onClose: () => void }) {
         <Label text="Your name (optional)">
           <input style={field} value={reporter} onChange={(e) => setReporter(e.target.value)}
                  maxLength={64} placeholder="So we know who reported it" />
+          {nameIssue && (
+            <span style={{ fontSize: 11.5, color: "var(--dim)" }}>
+              Couldn&apos;t get your Discord name ({nameIssue})
+            </span>
+          )}
         </Label>
       </div>
 
