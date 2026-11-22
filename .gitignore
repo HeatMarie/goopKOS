@@ -159,3 +159,4 @@ vite.config.ts.timestamp-*
 # GoopKOS
 .env.local
 watcher-state.json
+.next-check
