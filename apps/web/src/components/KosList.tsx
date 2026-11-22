@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import type { Target } from "@goopkos/core";
 import { classColor, className } from "@/lib/classes";
+import { AddTarget, RemoveTarget } from "@/components/AddTarget";
 
 type Filter = "all" | "active" | "retired";
 
@@ -20,6 +21,7 @@ function when(iso: string | null): string {
 export function KosList({ targets }: { targets: Target[] }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
+  const [adding, setAdding] = useState(false);
 
   const maxKills = useMemo(
     () => Math.max(1, ...targets.map((t) => t.kills)),
@@ -102,8 +104,23 @@ export function KosList({ targets }: { targets: Target[] }) {
               }}
             />
           </div>
+          <button
+            type="button"
+            onClick={() => setAdding((a) => !a)}
+            aria-expanded={adding}
+            style={{
+              flex: "0 0 auto", background: adding ? "var(--field)" : "var(--accent)",
+              border: "1px solid var(--accent)", color: adding ? "var(--accent)" : "var(--accent-ink)",
+              borderRadius: 6, fontFamily: "var(--body)", fontSize: 13.5, fontWeight: 600,
+              padding: "0 16px", cursor: "pointer", whiteSpace: "nowrap",
+            }}
+          >
+            {adding ? "Close" : "+ Add to KOS"}
+          </button>
         </div>
       </header>
+
+      {adding && <AddTarget onClose={() => setAdding(false)} />}
 
       <section style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
@@ -215,6 +232,7 @@ export function KosList({ targets }: { targets: Target[] }) {
               <th scope="col" className="micro" style={{ textAlign: "left", padding: "14px 16px" }}>Kills</th>
               <th scope="col" className="micro" style={{ textAlign: "left", padding: "14px 16px" }}>Why they are on here</th>
               <th scope="col" className="micro" style={{ textAlign: "left", padding: "14px 20px", whiteSpace: "nowrap" }}>Added</th>
+              <th scope="col" style={{ padding: "14px 20px 14px 0" }}><span className="sr">Remove</span></th>
             </tr>
           </thead>
           <tbody>
@@ -261,6 +279,9 @@ export function KosList({ targets }: { targets: Target[] }) {
                       {when(t.lastIncidentAt)}
                     </span>
                   </div>
+                </td>
+                <td style={{ padding: "15px 20px 15px 0", textAlign: "right" }}>
+                  <RemoveTarget id={t.id} name={t.name} />
                 </td>
               </tr>
             ))}

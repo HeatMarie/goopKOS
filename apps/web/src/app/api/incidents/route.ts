@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { validateIncident, nameKey, type IngestResult } from "@goopkos/core";
+import { validateIncident, type IngestResult } from "@goopkos/core";
 import { db } from "@/lib/db";
 import { isAuthorized } from "@/lib/auth";
+import { insertIncident } from "@/lib/ingest";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -50,46 +51,7 @@ export async function POST(req: Request): Promise<NextResponse> {
         continue;
       }
 
-      const targetRes = await client.query<{ id: string }>(
-        `insert into kos_target (name, name_key, class, level, first_seen_at, last_seen_at)
-         values ($1, $2, $3, $4, to_timestamp($5), to_timestamp($5))
-         on conflict (name_key) do update set
-           name         = excluded.name,
-           class        = coalesce(excluded.class, kos_target.class),
-           level        = coalesce(excluded.level, kos_target.level),
-           first_seen_at = least(kos_target.first_seen_at, excluded.first_seen_at),
-           last_seen_at  = greatest(kos_target.last_seen_at, excluded.last_seen_at)
-         returning id`,
-        [
-          incident.name,
-          nameKey(incident.name),
-          incident.class,
-          incident.level,
-          incident.occurredAt,
-        ],
-      );
-
-      const targetId = targetRes.rows[0]!.id;
-
-      const insertRes = await client.query(
-        `insert into kos_incident
-           (target_id, kind, note, zone, occurred_at, reported_by, source, client_id)
-         values ($1, $2, $3, $4, to_timestamp($5), $6, $7, $8)
-         on conflict (client_id) do nothing
-         returning id`,
-        [
-          targetId,
-          incident.kind,
-          incident.note,
-          incident.zone,
-          incident.occurredAt,
-          incident.reportedBy,
-          "addon",
-          incident.clientId,
-        ],
-      );
-
-      if (insertRes.rowCount === 1) result.inserted++;
+      if (await insertIncident(client, incident, "addon")) result.inserted++;
       else result.duplicates++;
     }
 

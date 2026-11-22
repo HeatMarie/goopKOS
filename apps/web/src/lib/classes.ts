@@ -31,3 +31,6 @@ export function className(klass: string | null): string {
   if (!klass) return "Unknown";
   return NAMES[klass] ?? klass.charAt(0) + klass.slice(1).toLowerCase();
 }
+
+/** Class ids in display order, for pickers. */
+export const CLASS_IDS = Object.keys(NAMES);

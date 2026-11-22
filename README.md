@@ -83,6 +83,11 @@ on startup. `pnpm --filter @goopkos/watcher find` just prints what it finds.
 | *key bindings* | Esc → Options → Keybindings → AddOns → GoopKOS: "KOS my target" and "Show recent enemies" |
 | `/kos list` | Prints how many incidents you are holding |
 
+Until everyone runs the addon, the list page (and the Discord Activity) has
+**+ Add to KOS** and a **Remove** button on each row. Both are open to anyone
+with the link, by choice. Inside Discord the "Your name" box fills itself from
+Discord once `DISCORD_CLIENT_SECRET` is set in Vercel.
+
 Anyone on the list gets an orange `[KOS]` badge above their nameplate, which
 is the actual point — you never have to read the list while you play. The
 badge is its own frame on the base nameplate, so it shows with the default
