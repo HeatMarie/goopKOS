@@ -87,9 +87,9 @@ export function KosList({ targets }: { targets: Target[] }) {
 
         <div style={{
           flex: "999 1 320px", minWidth: 0, display: "flex",
-          justifyContent: "flex-end", gap: 12,
+          justifyContent: "flex-end", gap: 12, flexWrap: "wrap",
         }}>
-          <div style={{ position: "relative", flex: "1 1 280px", maxWidth: 420 }}>
+          <div style={{ position: "relative", flex: "1 1 240px", maxWidth: 420, minWidth: 0 }}>
             <label className="sr" htmlFor="kos-search">Search the list</label>
             <svg style={{ position: "absolute", left: 14, top: 13 }} width="16" height="16"
                  viewBox="0 0 24 24" fill="none" stroke="var(--dim)" strokeWidth="2" aria-hidden="true">
@@ -109,6 +109,7 @@ export function KosList({ targets }: { targets: Target[] }) {
               }}
             />
           </div>
+          <div style={{ display: "flex", gap: 12, flex: "0 0 auto", marginLeft: "auto" }}>
           <button
             type="button"
             onClick={() => setGettingAddon((g) => !g)}
@@ -117,7 +118,7 @@ export function KosList({ targets }: { targets: Target[] }) {
               flex: "0 0 auto", background: gettingAddon ? "var(--field)" : "transparent",
               border: "1px solid var(--accent-2)", color: "var(--accent-2)",
               borderRadius: 6, fontFamily: "var(--body)", fontSize: 13.5, fontWeight: 600,
-              padding: "0 16px", cursor: "pointer", whiteSpace: "nowrap",
+              padding: "0 16px", cursor: "pointer", whiteSpace: "nowrap", minHeight: 42,
               boxShadow: gettingAddon ? "none" : "var(--glow-2)",
             }}
           >
@@ -131,12 +132,13 @@ export function KosList({ targets }: { targets: Target[] }) {
               flex: "0 0 auto", background: adding ? "var(--field)" : "var(--accent)",
               border: "1px solid var(--accent)", color: adding ? "var(--accent)" : "var(--accent-ink)",
               borderRadius: 6, fontFamily: "var(--body)", fontSize: 13.5, fontWeight: 600,
-              padding: "0 16px", cursor: "pointer", whiteSpace: "nowrap",
+              padding: "0 16px", cursor: "pointer", whiteSpace: "nowrap", minHeight: 42,
               boxShadow: adding ? "none" : "var(--glow)",
             }}
           >
             {adding ? "Close" : "+ Add to KOS"}
           </button>
+          </div>
         </div>
       </header>
 
@@ -245,7 +247,7 @@ export function KosList({ targets }: { targets: Target[] }) {
         background: "var(--panel)", border: "1px solid var(--line)",
         borderRadius: 9, overflowX: "auto",
       }}>
-        <table>
+        <table className="kos-table">
           <thead>
             <tr style={{ borderBottom: "1px solid var(--line)" }}>
               <th scope="col" className="micro" style={{ textAlign: "left", padding: "14px 20px", whiteSpace: "nowrap" }}>Target</th>
@@ -260,7 +262,7 @@ export function KosList({ targets }: { targets: Target[] }) {
           <tbody>
             {rows.map((t) => (
               <tr key={t.id} style={{ borderBottom: "1px solid var(--line-soft)" }}>
-                <td style={{ padding: "15px 20px", minWidth: 190 }}>
+                <td className="c-target" style={{ padding: "15px 20px", minWidth: 190 }}>
                   <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                     <span style={{ fontFamily: "var(--display)", fontSize: 15, fontWeight: 600 }}>
                       {t.name}
@@ -271,13 +273,13 @@ export function KosList({ targets }: { targets: Target[] }) {
                     </span>
                   </div>
                 </td>
-                <td style={{ padding: "15px 16px", fontFamily: "var(--mono)", fontSize: 14, color: "var(--text-2)", fontVariantNumeric: "tabular-nums" }}>
+                <td className="c-lvl" data-label="Lvl" style={{ padding: "15px 16px", fontFamily: "var(--mono)", fontSize: 14, color: "var(--text-2)", fontVariantNumeric: "tabular-nums" }}>
                   {t.level ?? "—"}
                 </td>
-                <td style={{ padding: "15px 16px", fontSize: 13.5, color: "var(--text-2)", whiteSpace: "nowrap" }}>
+                <td className="c-zone" data-label="Seen" style={{ padding: "15px 16px", fontSize: 13.5, color: "var(--text-2)", whiteSpace: "nowrap" }}>
                   {t.lastZone ?? "—"}
                 </td>
-                <td style={{ padding: "15px 16px", minWidth: 104 }}>
+                <td className="c-kills" data-label="Kills" style={{ padding: "15px 16px", minWidth: 104 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
                     <span style={{ fontFamily: "var(--mono)", fontSize: 14, fontWeight: 600, fontVariantNumeric: "tabular-nums", minWidth: 14 }}>
                       {t.kills}
@@ -292,10 +294,10 @@ export function KosList({ targets }: { targets: Target[] }) {
                     </span>
                   </div>
                 </td>
-                <td style={{ padding: "15px 16px", fontSize: 13.5, color: "var(--text-2)", lineHeight: 1.5, minWidth: 300 }}>
+                <td className="c-note" style={{ padding: "15px 16px", fontSize: 13.5, color: "var(--text-2)", lineHeight: 1.5, minWidth: 300 }}>
                   {t.lastNote ?? <span style={{ color: "var(--dim)" }}>No reason recorded</span>}
                 </td>
-                <td style={{ padding: "15px 20px", whiteSpace: "nowrap" }}>
+                <td className="c-added" style={{ padding: "15px 20px", whiteSpace: "nowrap" }}>
                   <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
                     <span style={{ fontSize: 12.5, color: "var(--text-2)" }}>{t.lastReportedBy ?? "—"}</span>
                     <span style={{ fontFamily: "var(--mono)", fontSize: 11, color: "var(--dim)" }}>
@@ -303,7 +305,7 @@ export function KosList({ targets }: { targets: Target[] }) {
                     </span>
                   </div>
                 </td>
-                <td style={{ padding: "15px 20px 15px 0", textAlign: "right" }}>
+                <td className="c-remove" style={{ padding: "15px 20px 15px 0", textAlign: "right" }}>
                   <RemoveTarget id={t.id} name={t.name} />
                 </td>
               </tr>

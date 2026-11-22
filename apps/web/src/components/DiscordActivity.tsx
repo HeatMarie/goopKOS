@@ -16,7 +16,7 @@ export interface DiscordName {
   error: string | null;
 }
 
-function inDiscord(): boolean {
+export function inDiscord(): boolean {
   return typeof window !== "undefined" && new URLSearchParams(window.location.search).has("frame_id");
 }
 

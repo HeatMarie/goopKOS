@@ -14,7 +14,7 @@ export default async function Page() {
   }
 
   return (
-    <main style={{ minHeight: "100vh", padding: "32px 28px 56px" }}>
+    <main style={{ minHeight: "100vh", padding: "clamp(20px, 4vw, 32px) clamp(16px, 3.5vw, 28px) 56px" }}>
       <div style={{ maxWidth: 1304, margin: "0 auto" }}>
         {error ? (
           <p style={{ color: "var(--danger)", fontFamily: "var(--mono)", fontSize: 13 }}>

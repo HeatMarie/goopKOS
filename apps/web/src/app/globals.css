@@ -78,3 +78,27 @@ tbody tr:hover { background: rgba(45, 226, 255, 0.05); }
   text-transform: uppercase;
   color: var(--muted);
 }
+
+/* Phones and the narrow Discord panel: each table row becomes a small card.
+   !important because the table cells carry inline desktop styles. */
+@media (max-width: 900px) {
+  .kos-table thead { display: none; }
+  .kos-table tbody tr {
+    display: flex; flex-wrap: wrap; align-items: center;
+    gap: 6px 14px; padding: 14px 16px;
+  }
+  .kos-table td { padding: 0 !important; min-width: 0 !important; white-space: normal !important; }
+  .kos-table td.c-target { flex: 1 1 calc(100% - 110px); order: 1; }
+  .kos-table td.c-remove { flex: 0 0 auto; order: 2; }
+  .kos-table td.c-lvl, .kos-table td.c-zone, .kos-table td.c-kills {
+    order: 3; flex: 0 0 auto; display: flex; align-items: center; font-size: 13px !important;
+  }
+  .kos-table td[data-label]::before {
+    content: attr(data-label);
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--muted); margin-right: 6px;
+  }
+  .kos-table td.c-note { order: 4; flex: 1 1 100%; font-size: 13px !important; }
+  .kos-table td.c-added { order: 5; flex: 1 1 100%; }
+  .kos-table td.c-added > div { flex-direction: row !important; gap: 8px !important; align-items: baseline; }
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { openExternal } from "@/components/DiscordActivity";
+import { inDiscord, openExternal } from "@/components/DiscordActivity";
 
 // Absolute, because inside Discord the page runs on discordsays.com and the
 // download has to open in the viewer's own browser.
@@ -10,13 +10,16 @@ const ZIP = "/GoopKOS.zip";
 const step: React.CSSProperties = { margin: 0, fontSize: 14, lineHeight: 1.6, color: "var(--text-2)" };
 const code: React.CSSProperties = {
   fontFamily: "var(--mono)", fontSize: 12.5, color: "var(--accent-2)",
-  background: "var(--field)", border: "1px solid var(--field-line)", borderRadius: 4, padding: "1px 6px",
+  background: "var(--field)", border: "1px solid var(--field-line)", borderRadius: 4, padding: "1px 6px", overflowWrap: "anywhere",
 };
 
 /** Download button and install steps for friends who don't have the addon yet. */
 export function GetAddon({ onClose }: { onClose: () => void }) {
-  async function download(e: React.MouseEvent<HTMLAnchorElement>) {
-    if (await openExternal(SITE + ZIP).catch(() => false)) e.preventDefault();
+  function download(e: React.MouseEvent<HTMLAnchorElement>) {
+    // Decide now: preventDefault after an await would be too late.
+    if (!inDiscord()) return;
+    e.preventDefault();
+    openExternal(SITE + ZIP).catch((err) => console.error("[addon] open link failed", err));
   }
 
   return (
