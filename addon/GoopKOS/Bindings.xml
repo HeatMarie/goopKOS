@@ -1,0 +1,8 @@
+<Bindings>
+  <Binding name="GOOPKOS_TARGET" header="GOOPKOS" category="ADDONS">
+    GoopKOS_KosTarget()
+  </Binding>
+  <Binding name="GOOPKOS_RECENT" category="ADDONS">
+    GoopKOS_ShowRecent()
+  </Binding>
+</Bindings>
