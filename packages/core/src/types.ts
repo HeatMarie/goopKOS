@@ -1,4 +1,5 @@
-export const INCIDENT_KINDS = ["killed_me", "ganked"] as const;
+/** revenge = one of us got them back. It never counts as a kill on us. */
+export const INCIDENT_KINDS = ["killed_me", "ganked", "revenge"] as const;
 
 export type IncidentKind = (typeof INCIDENT_KINDS)[number];
 
@@ -42,6 +43,8 @@ export interface Target {
   firstSeenAt: string;
   lastSeenAt: string;
   kills: number;
+  /** Times one of us got them back (kind = 'revenge'). */
+  revenge: number;
   incidentCount: number;
   lastZone: string | null;
   lastNote: string | null;

@@ -99,6 +99,42 @@ function KOS:SyncChannel()
   return channelIndex()
 end
 
+-- Update nudge. Everyone says their addon version on login; anyone who
+-- hears a newer one gets told once where to download it, and anyone who
+-- hears an older one says theirs back so the late joiner learns too.
+-- Older addons ignore VER messages (they only accept NEW and FULL).
+local SITE = "goop-kos.vercel.app"
+local nudged, lastReply = false, 0
+
+local function newer(a, b)   -- is version a newer than version b?
+  local pa, pb = {}, {}
+  for n in tostring(a):gmatch("%d+") do pa[#pa + 1] = tonumber(n) end
+  for n in tostring(b):gmatch("%d+") do pb[#pb + 1] = tonumber(n) end
+  for i = 1, math.max(#pa, #pb) do
+    local x, y = pa[i] or 0, pb[i] or 0
+    if x ~= y then return x > y end
+  end
+  return false
+end
+
+function KOS:AnnounceVersion()
+  enqueue("v1\tVER\t" .. (KOS.VERSION or "0"))
+end
+
+function KOS:HeardVersion(theirs)
+  if type(theirs) ~= "string" or #theirs > 20 then return end
+  if newer(theirs, KOS.VERSION) then
+    if not nudged then
+      nudged = true
+      KOS.Say("fresh goop! GoopKOS " .. theirs .. " is out (you have " .. (KOS.VERSION or "?")
+        .. "). Get it at " .. SITE .. " and replace your GoopKOS folder. Your list stays.")
+    end
+  elseif newer(KOS.VERSION, theirs) and time() - lastReply > 60 then
+    lastReply = time()
+    KOS:AnnounceVersion()
+  end
+end
+
 --- Send one new incident to everyone online.
 function KOS:Broadcast(entry)
   enqueue("v1\tNEW\t" .. serialize(entry))
@@ -112,7 +148,7 @@ function KOS:AnnounceFull()
     count = count + 1
   end
   if count > 0 then
-    print("|cffff7a18KOS|r announcing " .. count .. " incidents to the channel")
+    KOS.Say("sharing " .. count .. " splat" .. (count == 1 and "" or "s") .. " with the goop crew")
   end
 end
 
@@ -134,6 +170,7 @@ f:SetScript("OnEvent", function(_, event, ...)
       -- messages never print in chat, so the channel stays quiet anyway.
       JoinChannelByName(CHANNEL, PASSWORD)
       -- Queued now; pump() holds it until the join lands, then sends.
+      KOS:AnnounceVersion()
       KOS:AnnounceFull()
     end)
 
@@ -147,6 +184,10 @@ f:SetScript("OnEvent", function(_, event, ...)
 
     local version, kind, body = text:match("^(.-)\t(.-)\t(.*)$")
     if version ~= "v1" then return end
+    if kind == "VER" then
+      KOS:HeardVersion(body)
+      return
+    end
     if kind ~= "NEW" and kind ~= "FULL" then return end
 
     local entry = deserialize(body)
@@ -154,8 +195,10 @@ f:SetScript("OnEvent", function(_, event, ...)
 
     if KOS:Merge(entry) then
       if KOS.RefreshNameplates then KOS:RefreshNameplates() end
-      if kind == "NEW" then
-        print("|cffff7a18KOS|r " .. entry.name .. " added by " .. (entry.reportedBy or "someone"))
+      if kind == "NEW" and entry.kind == "revenge" then
+        KOS.Say("REVENGE! " .. (entry.reportedBy or "someone in the crew") .. " gooped " .. entry.name .. " back.")
+      elseif kind == "NEW" then
+        KOS.Say(entry.name .. " got gooped by " .. (entry.reportedBy or "someone in the crew"))
       end
     end
   end

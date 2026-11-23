@@ -31,6 +31,7 @@ interface Summary {
   class: string | null;
   level: number | null;
   kills: number;
+  revenge: number;
   reports: number;
   last_zone: string | null;
   last_note: string | null;
@@ -41,9 +42,10 @@ async function summary(name: string): Promise<Summary | null> {
   const res = await db().query<Summary>(
     `select t.name, t.class, t.level,
             count(i.id) filter (where i.kind = 'killed_me')::int as kills,
-            count(i.id)::int as reports,
+            count(i.id) filter (where i.kind = 'revenge')::int as revenge,
+            count(i.id) filter (where i.kind <> 'revenge')::int as reports,
             (array_agg(i.zone order by i.occurred_at desc) filter (where i.zone is not null))[1] as last_zone,
-            (array_agg(i.note order by i.occurred_at desc) filter (where i.note is not null))[1] as last_note,
+            (array_agg(i.note order by i.occurred_at desc) filter (where i.note is not null and i.kind <> 'revenge'))[1] as last_note,
             (array_agg(i.reported_by order by i.occurred_at desc))[1] as last_reported_by
        from kos_target t
        left join kos_incident i on i.target_id = t.id
@@ -59,6 +61,7 @@ function describe(s: Summary): string {
   const lines = [
     `**${md(s.name)}**${who ? ` (${who})` : ""}: **${s.kills}** kill${s.kills === 1 ? "" : "s"} on us, ${s.reports} report${s.reports === 1 ? "" : "s"}`,
   ];
+  if (s.revenge > 0) lines.push(`🗡️ Gooped back **${s.revenge}** time${s.revenge === 1 ? "" : "s"}`);
   if (s.last_zone) lines.push(`Last seen in ${md(s.last_zone)}`);
   if (s.last_note) lines.push(`> ${md(s.last_note)}`);
   return lines.join("\n");
@@ -102,6 +105,13 @@ async function add(i: Interaction): Promise<NextResponse> {
   }
 
   const s = await summary(incident.name);
+  if (incident.kind === "revenge") {
+    return reply(
+      `🗡️ **${md(reporter)}** gooped **${md(incident.name)}** back. Revenge!` +
+        (s ? `\nScore: they got us **${s.kills}**, we got them **${s.revenge}**.` : "") +
+        (incident.note ? `\n> ${md(incident.note)}` : ""),
+    );
+  }
   const verb = incident.kind === "killed_me" ? "killed one of us" : "ganked us";
   return reply(
     `🎯 **${md(incident.name)}** ${verb}. Added to KOS by **${md(reporter)}**.` +

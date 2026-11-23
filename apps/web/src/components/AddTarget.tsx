@@ -42,7 +42,7 @@ function Label({ text, children }: { text: string; children: React.ReactNode }) 
 export function AddTarget({ onClose }: { onClose: () => void }) {
   const router = useRouter();
   const [name, setName] = useState("");
-  const [kind, setKind] = useState<"ganked" | "killed_me">("killed_me");
+  const [kind, setKind] = useState<"ganked" | "killed_me" | "revenge">("killed_me");
   const [klass, setKlass] = useState("");
   const [zone, setZone] = useState("");
   const [note, setNote] = useState("");
@@ -119,6 +119,7 @@ export function AddTarget({ onClose }: { onClose: () => void }) {
           <select style={field} value={kind} onChange={(e) => setKind(e.target.value as typeof kind)}>
             <option value="killed_me">They killed one of us</option>
             <option value="ganked">Ganked / harassing us</option>
+            <option value="revenge">We got revenge on them</option>
           </select>
         </Label>
         <Label text="Class (optional)">

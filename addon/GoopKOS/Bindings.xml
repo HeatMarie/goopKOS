@@ -5,4 +5,7 @@
   <Binding name="GOOPKOS_RECENT" category="ADDONS">
     GoopKOS_ShowRecent()
   </Binding>
+  <Binding name="GOOPKOS_REVENGE" category="ADDONS">
+    GoopKOS_Revenge()
+  </Binding>
 </Bindings>

@@ -7,7 +7,7 @@
     "build": "pnpm --filter @goopkos/web build",
     "watch": "pnpm --filter @goopkos/watcher start",
     "typecheck": "tsc -b --pretty",
-    "addon:zip": "cd addon && tar -a -cf ../apps/web/public/GoopKOS.zip GoopKOS"
+    "addon:zip": "node scripts/addon-zip.mjs"
   },
   "devDependencies": {
     "typescript": "^5.6.3",

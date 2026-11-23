@@ -49,6 +49,7 @@ export const KOS_COMMAND = {
           choices: [
             { name: "They killed one of us", value: "killed_me" },
             { name: "Ganked / harassing us", value: "ganked" },
+            { name: "We got revenge on them", value: "revenge" },
           ],
         },
         { type: STRING, name: "why", description: "What they did", max_length: 500 },

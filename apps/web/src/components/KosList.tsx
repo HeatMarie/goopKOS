@@ -204,6 +204,14 @@ export function KosList({ targets }: { targets: Target[] }) {
                 }}>
                   kills<br />on us
                 </span>
+                {t.revenge > 0 && (
+                  <span title="Times one of us got them back" style={{
+                    marginLeft: "auto", fontFamily: "var(--mono)", fontSize: 12,
+                    color: "#7dff3a", textShadow: "0 0 6px rgba(125, 255, 58, 0.5)",
+                  }}>
+                    🗡 {t.revenge} back
+                  </span>
+                )}
               </div>
             </article>
           ))}
@@ -293,6 +301,14 @@ export function KosList({ targets }: { targets: Target[] }) {
                       }} />
                     </span>
                   </div>
+                  {t.revenge > 0 && (
+                    <div title="Times one of us got them back" style={{
+                      marginTop: 5, fontFamily: "var(--mono)", fontSize: 11.5, whiteSpace: "nowrap",
+                      color: "#7dff3a", textShadow: "0 0 6px rgba(125, 255, 58, 0.5)",
+                    }}>
+                      🗡 {t.revenge} back
+                    </div>
+                  )}
                 </td>
                 <td className="c-note" style={{ padding: "15px 16px", fontSize: 13.5, color: "var(--text-2)", lineHeight: 1.5, minWidth: 300 }}>
                   {t.lastNote ?? <span style={{ color: "var(--dim)" }}>No reason recorded</span>}

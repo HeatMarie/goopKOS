@@ -36,6 +36,84 @@ local function isEnemyFaction(unit, guid)
 end
 KOS.IsEnemyFaction = isEnemyFaction
 
+-- Every chat line goes through here, so the voice stays in one place.
+local GOOP = "|cff7dff3aGoop|r "
+function KOS.Say(text) print(GOOP .. text) end
+local say = KOS.Say
+
+KOS.VERSION = (C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata(ADDON_NAME, "Version"))
+  or (GetAddOnMetadata and GetAddOnMetadata(ADDON_NAME, "Version")) or "0"
+
+local function classColored(name, class)
+  local c = class and RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]
+  if c and c.colorStr then return "|c" .. c.colorStr .. name .. "|r" end
+  return name
+end
+
+local function ago(t)
+  local s = time() - (t or 0)
+  if s < 60 then return "just now" end
+  if s < 3600 then return math.floor(s / 60) .. "m ago" end
+  if s < 86400 then return math.floor(s / 3600) .. "h ago" end
+  return math.floor(s / 86400) .. "d ago"
+end
+
+local LIST_MAX = 20   -- chat lines; the rest is summed up as "+N more"
+
+--- /kos list: one line per person, most kills first, then most recent.
+--- Kills are counted from incidents, same as the website's count(*).
+function KOS:PrintList()
+  local byName, people = {}, {}
+  for _, e in ipairs(GoopKOSDB.incidents) do
+    if e.name then
+      local key = e.name:lower()
+      local p = byName[key]
+      if not p then
+        p = { name = e.name, count = 0, back = 0, last = 0 }
+        byName[key] = p
+        people[#people + 1] = p
+      end
+      if e.kind == "revenge" then
+        p.back = p.back + 1
+      else
+        p.count = p.count + 1
+      end
+      if e.kind ~= "revenge" and (e.occurredAt or 0) >= p.last then
+        p.last, p.by = e.occurredAt or 0, e.reportedBy
+        p.class = e.class or p.class
+        p.level = e.level or p.level
+      end
+    end
+  end
+
+  -- Only ever gooped back, never a threat: not on the list.
+  for i = #people, 1, -1 do
+    if people[i].count == 0 then table.remove(people, i) end
+  end
+
+  if #people == 0 then
+    say("the goop is empty. Nobody's earned it... yet.")
+    return
+  end
+  table.sort(people, function(a, b)
+    if a.count ~= b.count then return a.count > b.count end
+    return a.last > b.last
+  end)
+
+  say(#people .. (#people == 1 and " gremlin" or " gremlins") .. " stuck in the goop:")
+  for i = 1, math.min(#people, LIST_MAX) do
+    local p = people[i]
+    print("  " .. classColored(p.name, p.class)
+      .. (p.level and (" (" .. p.level .. ")") or "")
+      .. "  |cffff7a18x" .. p.count .. "|r"
+      .. (p.back > 0 and ("  |cff7dff3a+" .. p.back .. " back|r") or "")
+      .. "  |cff9d9d9d" .. ago(p.last) .. (p.by and (" by " .. p.by) or "") .. "|r")
+  end
+  if #people > LIST_MAX then
+    print("  |cff9d9d9d...and " .. (#people - LIST_MAX) .. " more on the website|r")
+  end
+end
+
 --- "First Last". Forever has surnames and UnitName drops them;
 --- GetUnitName(unit, true) keeps them (and adds -Realm for other realms).
 function KOS.FullName(unit)
@@ -63,7 +141,7 @@ end
 function KOS:ActiveNames()
   local names = {}
   for _, entry in ipairs(GoopKOSDB.incidents) do
-    if entry.name then names[entry.name:lower()] = true end
+    if entry.name and entry.kind ~= "revenge" then names[entry.name:lower()] = true end
   end
   return names
 end
@@ -103,10 +181,10 @@ local function splitNameAndNote(rest)
   return known[w1:lower()] or w1, after
 end
 
---- /kos with no name, or the "KOS my target" key binding.
+--- /kos with no name, or the "Goop my target" key binding.
 function KOS:LogTarget(note)
   if not UnitExists("target") or not UnitIsPlayer("target") or not isEnemyFaction("target") then
-    print("|cffff7a18KOS|r target an enemy player first, or use /kos recent, /kos add Name, /kos list")
+    say("goop needs an enemy player targeted. Or try /kos recent, /kos add Name, /kos list")
     return
   end
   KOS:Record(KOS.FullName("target"), "ganked", note, "target")
@@ -114,10 +192,22 @@ end
 
 -- Key bindings (Bindings.xml). Esc > Options > Keybindings > AddOns > GoopKOS.
 BINDING_HEADER_GOOPKOS      = "GoopKOS"
-BINDING_NAME_GOOPKOS_TARGET = "KOS my target"
-BINDING_NAME_GOOPKOS_RECENT = "Show recent enemies"
+BINDING_NAME_GOOPKOS_TARGET = "Goop my target (KOS)"
+BINDING_NAME_GOOPKOS_RECENT = "Who can I goop? (recent enemies)"
 function GoopKOS_KosTarget() KOS:LogTarget(nil) end
+BINDING_NAME_GOOPKOS_REVENGE = "Got revenge on my target"
 function GoopKOS_ShowRecent() KOS:ShowRecent("ganked") end
+function GoopKOS_Revenge() KOS:LogRevenge(nil) end
+
+--- /kos revenge with no name, or the key binding. Works on a corpse too:
+--- target the body and press it.
+function KOS:LogRevenge(note)
+  if not UnitExists("target") or not UnitIsPlayer("target") or not isEnemyFaction("target") then
+    say("target the enemy you got (their body works), or /kos revenge Name")
+    return
+  end
+  KOS:Record(KOS.FullName("target"), "revenge", note, "target")
+end
 
 --- known: optional { class, level } for when there is no live unit, e.g. a
 --- click in the recent-enemies window after they've run off.
@@ -165,7 +255,13 @@ function KOS:Record(name, kind, note, unit, guid, known)
   if self.Broadcast then self:Broadcast(entry) end
   if self.RefreshNameplates then self:RefreshNameplates() end
 
-  print("|cffff7a18KOS|r " .. name .. " logged (" .. kind .. ")")
+  if kind == "revenge" then
+    say("REVENGE! " .. name .. " got gooped back.")
+  elseif kind == "killed_me" then
+    say(name .. " killed you. Into the goop they go.")
+  else
+    say(name .. " got gooped.")
+  end
 end
 
 local function prune()
@@ -177,7 +273,7 @@ local function prune()
   local dropped = #GoopKOSDB.incidents - #kept
   GoopKOSDB.incidents = kept
   if dropped > 0 then
-    print("|cffff7a18KOS|r pruned " .. dropped .. " entries older than " .. PRUNE_DAYS .. " days")
+    say(dropped .. " old splat" .. (dropped == 1 and "" or "s") .. " dried up (older than " .. PRUNE_DAYS .. " days)")
   end
 end
 
@@ -207,7 +303,7 @@ f:SetScript("OnEvent", function(_, event, arg1)
         end
       end
       if added > 0 then
-        print("|cffff7a18KOS|r " .. added .. " new from the website")
+        say(added .. " fresh glob" .. (added == 1 and "" or "s") .. " oozed in from the website. /kos list to see who")
       end
     end
   end
@@ -218,7 +314,7 @@ SlashCmdList.GOOPKOS = function(msg)
   msg = msg and msg:match("^%s*(.-)%s*$") or ""
 
   if msg == "list" then
-    print("|cffff7a18KOS|r " .. #GoopKOSDB.incidents .. " incidents on file")
+    KOS:PrintList()
     return
   end
 
@@ -228,52 +324,90 @@ SlashCmdList.GOOPKOS = function(msg)
   end
 
   -- Probe: can addons read Blizzard's Death Recap here? Run right after dying.
-  if msg == "recap" then
-    if not C_DeathRecap then
-      print("|cffff7a18KOS|r recap: C_DeathRecap does not exist in this client")
+  -- Your last few deaths from WoW's death recap, cleaned up: each name once
+  -- with a count, split into enemy players, friendly players and mobs.
+  if msg == "recap" or msg == "deaths" then
+    local ids = KOS.RecapIds and KOS.RecapIds() or {}
+    if #ids == 0 then
+      say("no deaths on record yet. Lucky you.")
       return
     end
-    local fns = {}
-    for k in pairs(C_DeathRecap) do fns[#fns + 1] = tostring(k) end
-    table.sort(fns)
-    print("|cffff7a18KOS|r recap API: " .. table.concat(fns, ", "))
-    local found = false
-    for id = 1, 30 do
-      local ok, events = pcall(C_DeathRecap.GetRecapEvents, id)
-      if ok and type(events) == "table" and #events > 0 then
-        found = true
-        local seen = {}
-        for i = 1, math.min(#events, 5) do
-          local src = events[i].sourceName
-          local secret = issecretvalue and issecretvalue(src)
-          seen[#seen + 1] = secret and "<secret>" or tostring(src)
+    local GROUPS = {
+      { key = "enemy",    label = "|cffff4040enemy|r" },
+      { key = "friendly", label = "|cff4fa3fffriendly|r" },
+      { key = "unknown",  label = "|cffffd100player?|r" },
+      { key = "mob",      label = "|cff9d9d9dmobs|r" },
+    }
+    say("your last " .. math.min(3, #ids) .. " death" .. (#ids == 1 and "" or "s") .. ", newest first:")
+    for k = #ids, math.max(1, #ids - 2), -1 do
+      local ok, events = pcall(C_DeathRecap.GetRecapEvents, ids[k])
+      local byGroup, counts = {}, {}
+      for _, ev in ipairs((ok and type(events) == "table") and events or {}) do
+        local src = ev.sourceName
+        local name = (src == nil) and "falling/environment"
+          or ((issecretvalue and issecretvalue(src)) and "someone hidden" or tostring(src))
+        local tag = KOS.RecapSourceTag(ev)
+        local group = (src == nil and "mob") or (tag == "player, enemy" and "enemy")
+          or (tag == "player" and "friendly") or (tag == "guid hidden" and "unknown") or "mob"
+        byGroup[group] = byGroup[group] or {}
+        if not counts[name] then
+          counts[name] = 0
+          table.insert(byGroup[group], name)
         end
-        print("|cffff7a18KOS|r recap #" .. id .. " sources: " .. table.concat(seen, ", "))
+        counts[name] = counts[name] + 1
       end
+      local parts = {}
+      for _, g in ipairs(GROUPS) do
+        local names = byGroup[g.key]
+        if names then
+          local list = {}
+          for _, n in ipairs(names) do
+            list[#list + 1] = n .. (counts[n] > 1 and (" x" .. counts[n]) or "")
+          end
+          parts[#parts + 1] = g.label .. ": " .. table.concat(list, ", ")
+        end
+      end
+      print("  " .. (#ids - k + 1) .. ". " .. (#parts > 0 and table.concat(parts, "  |cff666666·|r  ") or "nothing recorded"))
     end
-    if not found then print("|cffff7a18KOS|r recap: no readable recap events") end
     return
   end
 
   if msg == "plates off" or msg == "plates on" then
     GoopKOSDB.platesOff = (msg == "plates off") or nil
-    print("|cffff7a18KOS|r nameplate badges " .. (GoopKOSDB.platesOff and "OFF" or "ON") .. " — /reload to apply fully")
+    say("nameplate badges " .. (GoopKOSDB.platesOff and "dried up (off)" or "gooey (on)") .. " — /reload to apply fully")
     if KOS.RefreshNameplates then KOS:RefreshNameplates() end
     return
   end
 
   if msg == "sync off" or msg == "sync on" then
     GoopKOSDB.syncOff = (msg == "sync off") or nil
-    print("|cffff7a18KOS|r channel sync " .. (GoopKOSDB.syncOff and "OFF" or "ON") .. " — /reload to apply")
+    say("goop sharing " .. (GoopKOSDB.syncOff and "off" or "on") .. " — /reload to apply")
     return
   end
 
   if msg == "status" then
     local channel = KOS.SyncChannel and KOS:SyncChannel()
-    print("|cffff7a18KOS|r incidents: " .. #GoopKOSDB.incidents
+    say("splats: " .. #GoopKOSDB.incidents
       .. " | faction: " .. tostring(UnitFactionGroup("player"))
       .. " | guild: " .. tostring(GetGuildInfo("player"))
-      .. " | sync channel: " .. (channel and ("joined (#" .. channel .. ")") or "NOT joined"))
+      .. " | sync channel: " .. (channel and ("goop channel #" .. channel) or "NOT in the goop channel"))
+    return
+  end
+
+  -- /kos revenge (target) or /kos revenge Name [note]. "got" is the short form.
+  local rest = msg:match("^revenge%s*(.*)$") or msg:match("^got%s*(.*)$")
+  if rest then
+    if rest == "" then
+      KOS:LogRevenge(nil)
+    else
+      local name, note = splitNameAndNote(rest)
+      if name and name ~= "" then KOS:Record(name, "revenge", note) end
+    end
+    return
+  end
+
+  if msg == "version" then
+    say("you have GoopKOS " .. (KOS.VERSION or "?"))
     return
   end
 
@@ -283,7 +417,7 @@ SlashCmdList.GOOPKOS = function(msg)
   if msg == "add" or msg:match("^add%s") then
     local name, note = splitNameAndNote(msg:match("^add%s+(.*)$") or "")
     if not name or name == "" then
-      print('|cffff7a18KOS|r usage: /kos add Name [note]  or  /kos add "First Last" [note]')
+      say('who are we gooping? /kos add Name [note]  or  /kos add "First Last" [note]')
       return
     end
     KOS:Record(name, "ganked", note)

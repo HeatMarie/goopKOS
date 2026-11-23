@@ -12,6 +12,7 @@ import {
   type Incident,
 } from "@goopkos/core";
 import { findSavedVariables } from "./find.ts";
+import { startDiscordFeed } from "./discord.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const STATE_PATH = join(HERE, "..", "watcher-state.json");
@@ -40,13 +41,15 @@ function webDataBody(lua: string): string {
 interface State {
   /** clientId -> the incident's occurredAt, so old ids can be pruned. */
   sent: Record<string, number>;
+  /** Newest Discord message already read from the KOS channel. */
+  discordLastId?: string;
 }
 
 function loadState(): State {
   if (!existsSync(STATE_PATH)) return { sent: {} };
   try {
     const parsed = JSON.parse(readFileSync(STATE_PATH, "utf8"));
-    return { sent: parsed?.sent ?? {} };
+    return { sent: parsed?.sent ?? {}, discordLastId: parsed?.discordLastId };
   } catch {
     console.warn("[kos] state file unreadable, starting fresh");
     return { sent: {} };
@@ -145,7 +148,10 @@ async function main(): Promise<void> {
 
       console.log(`[kos] ${reason}: sending ${incidents.length} incident(s)`);
       const result = await client.sendIncidents(incidents);
-      for (const inc of incidents) state.sent[inc.clientId] = inc.occurredAt;
+      // A rejection here means the site is older than the addon (e.g. a new
+      // kind before the deploy). Leave those unsent so they retry later.
+      const refused = new Set(result.rejected.map((r) => r.clientId));
+      for (const inc of incidents) if (!refused.has(inc.clientId)) state.sent[inc.clientId] = inc.occurredAt;
       saveState(state);
       console.log(
         `[kos] accepted ${result.inserted} new, ${result.duplicates} already known` +
@@ -188,10 +194,19 @@ async function main(): Promise<void> {
     console.warn("      Set GOOPKOS_ADDON_DIR in .env to the AddOns\\GoopKOS folder to turn it on.");
   }
 
+  // lowercase -> proper-case names on the list, refreshed by pull(). Lets a
+  // name typed in Discord in lowercase keep the list's capitalisation.
+  let knownNames = new Map<string, string>();
+
   async function pull(): Promise<void> {
-    if (!addonDir) return;
     try {
       const { generatedAt, incidents } = await client.exportIncidents();
+      const names = new Map<string, string>();
+      for (const i of incidents as { name?: unknown }[]) {
+        if (typeof i?.name === "string") names.set(i.name.toLowerCase(), i.name);
+      }
+      knownNames = names;
+      if (!addonDir) return;
       const { lua, count } = webDataLua(incidents, generatedAt);
       if (webDataBody(lua) === lastWebData) return;
       const target = join(addonDir, WEBDATA);
@@ -219,6 +234,27 @@ async function main(): Promise<void> {
     if (settleTimer) clearTimeout(settleTimer);
     settleTimer = setTimeout(() => void sync("file changed"), SETTLE_MS);
   }, pollMs);
+
+  // Discord -> list: names typed in the KOS channel. Off unless both are set.
+  const botToken = process.env.DISCORD_BOT_TOKEN;
+  const kosChannel = process.env.DISCORD_KOS_CHANNEL_ID;
+  if (botToken && kosChannel) {
+    startDiscordFeed(
+      {
+        token: botToken,
+        channelId: kosChannel,
+        client,
+        knownNames: () => knownNames,
+        getLastId: () => state.discordLastId,
+        setLastId: (id) => {
+          if (state.discordLastId && BigInt(id) <= BigInt(state.discordLastId)) return;
+          state.discordLastId = id;
+          saveState(state);
+        },
+      },
+      Number(process.env.DISCORD_POLL_MS ?? 10_000),
+    );
+  }
 
   console.log(`[kos] watching every ${pollMs}ms. Ctrl+C to stop.`);
   if (addonDir) console.log(`[kos] site -> game every ${pullMs / 1000}s into ${join(addonDir, WEBDATA)}`);
