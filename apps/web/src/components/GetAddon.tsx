@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { inDiscord, openExternal } from "@/components/DiscordActivity";
 import { ADDON_VERSION } from "@/lib/addonVersion";
 
@@ -14,8 +15,17 @@ const code: React.CSSProperties = {
   background: "var(--field)", border: "1px solid var(--field-line)", borderRadius: 4, padding: "1px 6px", overflowWrap: "anywhere",
 };
 
-// The installer program. Set to its path (like "/GoopKOS-Setup.exe") once it exists.
-const HELPER_ZIP: string | null = null;
+// The program downloads, one per OS. /api/helper/download says which exist on
+// the newest GitHub release, so this turns on by itself after a release.
+const OSES = [
+  { key: "win", label: "Windows" },
+  { key: "mac", label: "Mac" },
+] as const;
+type OsKey = (typeof OSES)[number]["key"];
+
+const secondary: React.CSSProperties = {
+  background: "transparent", color: "var(--accent-2)", border: "1px solid var(--accent-2)", boxShadow: "none",
+};
 
 const option: React.CSSProperties = {
   display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 10,
@@ -29,6 +39,17 @@ const primary: React.CSSProperties = {
 
 /** Download choices and install steps for friends who don't have the addon yet. */
 export function GetAddon({ onClose }: { onClose: () => void }) {
+  const [downloads, setDownloads] = useState<Record<OsKey, boolean> | null>(null);
+  const [mine, setMine] = useState<OsKey | null>(null);
+
+  useEffect(() => {
+    setMine(/Mac/i.test(navigator.userAgent) ? "mac" : "win");
+    fetch("/api/helper/download")
+      .then((r) => (r.ok ? r.json() : { win: false, mac: false }))
+      .then((j) => setDownloads({ win: !!j.win, mac: !!j.mac }))
+      .catch(() => setDownloads({ win: false, mac: false }));
+  }, []);
+
   function open(e: React.MouseEvent<HTMLAnchorElement>, path: string) {
     // Decide now: preventDefault after an await would be too late.
     if (!inDiscord()) return;
@@ -62,12 +83,30 @@ export function GetAddon({ onClose }: { onClose: () => void }) {
             Installs the addon, keeps it up to date, and syncs your kills with the site and Discord, so
             there&apos;s nothing to copy by hand.
           </p>
-          {HELPER_ZIP ? (
-            <a href={HELPER_ZIP} download onClick={(e) => open(e, HELPER_ZIP)} style={primary}>
-              Download the program
-            </a>
-          ) : (
+          {downloads === null ? (
+            <span style={{ ...primary, opacity: 0.45 }}>Checking...</span>
+          ) : !downloads.win && !downloads.mac ? (
             <span style={{ ...primary, opacity: 0.45, cursor: "not-allowed" }}>Coming soon</span>
+          ) : (
+            <>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: "auto" }}>
+                {OSES.filter((o) => downloads[o.key]).map((o) => (
+                  <a
+                    key={o.key}
+                    href={`/api/helper/download?os=${o.key}`}
+                    onClick={(e) => open(e, `/api/helper/download?os=${o.key}`)}
+                    style={{ ...primary, marginTop: 0, ...(o.key !== mine ? secondary : null) }}
+                  >
+                    Download for {o.label}
+                  </a>
+                ))}
+              </div>
+              <p style={{ ...step, fontSize: 12.5 }}>
+                Your computer may warn about an unknown publisher. On Windows click <strong>More info</strong>, then{" "}
+                <strong>Run anyway</strong>. On a Mac, right-click the program, choose <strong>Open</strong>, then{" "}
+                <strong>Open</strong> again.
+              </p>
+            </>
           )}
         </div>
 
