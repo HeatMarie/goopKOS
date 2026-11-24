@@ -260,7 +260,15 @@ f:RegisterEvent("UNIT_TARGET")
 -- event name errors, so ask nicely.
 pcall(f.RegisterEvent, f, "PLAYER_SOFT_ENEMY_CHANGED")
 
+-- Battlegrounds and arenas: everyone is an enemy and deaths are constant, so
+-- no tracking, death window or revenge prompt there. /kos recent still works.
+local function inPvPInstance()
+  local _, kind = IsInInstance()
+  return kind == "pvp" or kind == "arena"
+end
+
 f:SetScript("OnEvent", function(_, event, unit)
+  if inPvPInstance() then return end
   if event == "PLAYER_REGEN_DISABLED" or event == "PLAYER_REGEN_ENABLED" then
     lastFight = time()
   elseif event == "UNIT_HEALTH" then
