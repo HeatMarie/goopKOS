@@ -126,7 +126,7 @@ function KOS:HeardVersion(theirs)
   if newer(theirs, KOS.VERSION) then
     if not nudged then
       nudged = true
-      KOS.Say("fresh goop! GoopKOS " .. theirs .. " is out (you have " .. (KOS.VERSION or "?")
+      KOS.Say("new version available! GoopKOS " .. theirs .. " is out (you have " .. (KOS.VERSION or "?")
         .. "). Get it at " .. SITE .. " and replace your GoopKOS folder. Your list stays.")
     end
   elseif newer(KOS.VERSION, theirs) and time() - lastReply > 60 then
@@ -148,7 +148,7 @@ function KOS:AnnounceFull()
     count = count + 1
   end
   if count > 0 then
-    KOS.Say("sharing " .. count .. " splat" .. (count == 1 and "" or "s") .. " with the goop crew")
+    KOS.Say("sharing " .. count .. (count == 1 and " KOS entry" or " KOS entries") .. " with other GoopKOS users")
   end
 end
 
@@ -196,9 +196,9 @@ f:SetScript("OnEvent", function(_, event, ...)
     if KOS:Merge(entry) then
       if KOS.RefreshNameplates then KOS:RefreshNameplates() end
       if kind == "NEW" and entry.kind == "revenge" then
-        KOS.Say("REVENGE! " .. (entry.reportedBy or "someone in the crew") .. " gooped " .. entry.name .. " back.")
+        KOS.Say((entry.reportedBy or "Someone") .. " got revenge on " .. entry.name .. ".")
       elseif kind == "NEW" then
-        KOS.Say(entry.name .. " got gooped by " .. (entry.reportedBy or "someone in the crew"))
+        KOS.Say(entry.name .. " was added to the KOS list by " .. (entry.reportedBy or "another GoopKOS user"))
       end
     end
   end

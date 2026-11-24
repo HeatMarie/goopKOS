@@ -9,4 +9,5 @@ WebData.lua
 Capture.lua
 Sync.lua
 Nameplates.lua
+Tooltip.lua
 Recent.lua

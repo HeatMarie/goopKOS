@@ -92,7 +92,7 @@ function KOS:PrintList()
   end
 
   if #people == 0 then
-    say("the goop is empty. Nobody's earned it... yet.")
+    say("the KOS list is empty.")
     return
   end
   table.sort(people, function(a, b)
@@ -100,7 +100,7 @@ function KOS:PrintList()
     return a.last > b.last
   end)
 
-  say(#people .. (#people == 1 and " gremlin" or " gremlins") .. " stuck in the goop:")
+  say(#people .. (#people == 1 and " player" or " players") .. " on the KOS list:")
   for i = 1, math.min(#people, LIST_MAX) do
     local p = people[i]
     print("  " .. classColored(p.name, p.class)
@@ -146,6 +146,33 @@ function KOS:ActiveNames()
   return names
 end
 
+--- Is this name on the KOS list? Returns nil if not, otherwise
+--- { name, count, back, last, zone, by, class, level } from the reports we hold.
+--- Someone with only revenge entries is not a threat, so not listed.
+--- Used by /kos check, the tooltip and the target warning.
+function KOS:Lookup(name)
+  if type(name) ~= "string" or name == "" then return nil end
+  local key = name:lower()
+  local r
+  for _, e in ipairs(GoopKOSDB.incidents) do
+    if e.name and e.name:lower() == key then
+      r = r or { name = e.name, count = 0, back = 0, last = 0 }
+      if e.kind == "revenge" then
+        r.back = r.back + 1
+      else
+        r.count = r.count + 1
+        if (e.occurredAt or 0) >= r.last then
+          r.last, r.zone, r.by = e.occurredAt or 0, e.zone, e.reportedBy
+          r.class = e.class or r.class
+          r.level = e.level or r.level
+        end
+      end
+    end
+  end
+  if r and r.count > 0 then return r end
+  return nil
+end
+
 --- lower -> proper-case name, for everyone listed or recently seen.
 local function knownNames()
   local known = {}
@@ -184,7 +211,7 @@ end
 --- /kos with no name, or the "Goop my target" key binding.
 function KOS:LogTarget(note)
   if not UnitExists("target") or not UnitIsPlayer("target") or not isEnemyFaction("target") then
-    say("goop needs an enemy player targeted. Or try /kos recent, /kos add Name, /kos list")
+    say("target an enemy player to add them. Or use /kos recent, /kos add Name, /kos list")
     return
   end
   KOS:Record(KOS.FullName("target"), "ganked", note, "target")
@@ -256,11 +283,11 @@ function KOS:Record(name, kind, note, unit, guid, known)
   if self.RefreshNameplates then self:RefreshNameplates() end
 
   if kind == "revenge" then
-    say("REVENGE! " .. name .. " got gooped back.")
+    say("revenge logged: you got " .. name .. " back.")
   elseif kind == "killed_me" then
-    say(name .. " killed you. Into the goop they go.")
+    say(name .. " killed you and was added to the KOS list.")
   else
-    say(name .. " got gooped.")
+    say(name .. " was added to the KOS list.")
   end
 end
 
@@ -273,7 +300,7 @@ local function prune()
   local dropped = #GoopKOSDB.incidents - #kept
   GoopKOSDB.incidents = kept
   if dropped > 0 then
-    say(dropped .. " old splat" .. (dropped == 1 and "" or "s") .. " dried up (older than " .. PRUNE_DAYS .. " days)")
+    say(dropped .. " old KOS entr" .. (dropped == 1 and "y" or "ies") .. " removed (older than " .. PRUNE_DAYS .. " days)")
   end
 end
 
@@ -303,7 +330,7 @@ f:SetScript("OnEvent", function(_, event, arg1)
         end
       end
       if added > 0 then
-        say(added .. " fresh glob" .. (added == 1 and "" or "s") .. " oozed in from the website. /kos list to see who")
+        say(added .. " new KOS entr" .. (added == 1 and "y" or "ies") .. " added from the website. /kos list to see who")
       end
     end
   end
@@ -323,13 +350,40 @@ SlashCmdList.GOOPKOS = function(msg)
     return
   end
 
+  -- /kos check (target) or /kos check Name: read-only lookup, never records.
+  if msg == "check" or msg:match("^check%s") then
+    -- No note here, so everything after "check" is the name ("First Last",
+    -- quoted, or chat-style First-Last).
+    local name = (msg:match("^check%s+(.*)$") or ""):gsub('^"(.-)"$', "%1")
+    -- A pasted "First-Last" may be a spaced name or Name-Realm: try as typed first.
+    if name ~= "" and not KOS:Lookup(name) and not name:find("%s") then
+      local spaced = name:gsub("%-", " ")
+      if KOS:Lookup(spaced) then name = spaced end
+    end
+    if (not name or name == "") and UnitExists("target") and UnitIsPlayer("target") then
+      name = KOS.FullName("target")
+    end
+    if not name or name == "" or (issecretvalue and issecretvalue(name)) then
+      say("who are we checking? /kos check Name, or target someone")
+      return
+    end
+    local r = KOS:Lookup(name)
+    if not r then
+      say(name .. " is not on the KOS list.")
+    else
+      say(r.name .. " is on the KOS list: " .. r.count .. (r.count == 1 and " report" or " reports")
+        .. (r.zone and (", last in " .. r.zone) or ""))
+    end
+    return
+  end
+
   -- Probe: can addons read Blizzard's Death Recap here? Run right after dying.
   -- Your last few deaths from WoW's death recap, cleaned up: each name once
   -- with a count, split into enemy players, friendly players and mobs.
   if msg == "recap" or msg == "deaths" then
     local ids = KOS.RecapIds and KOS.RecapIds() or {}
     if #ids == 0 then
-      say("no deaths on record yet. Lucky you.")
+      say("no deaths on record yet.")
       return
     end
     local GROUPS = {
@@ -372,25 +426,40 @@ SlashCmdList.GOOPKOS = function(msg)
     return
   end
 
+  -- Probe: what do the tooltip and right-click menu hooks see? Hover a player
+  -- first, then run this.
+  if msg == "debug" then
+    local t = KOS.tip or {}
+    say("loaded GoopKOS " .. (KOS.VERSION or "?") .. " | entries: " .. #GoopKOSDB.incidents)
+    say("tooltip hook: " .. tostring(t.mode) .. ", fired " .. tostring(t.fired)
+      .. "x, last unit: " .. tostring(t.unit) .. ", name: " .. tostring(t.name)
+      .. ", on list: " .. tostring(t.found))
+    say("right-click menu API: " .. ((Menu and Menu.ModifyMenu) and "yes" or "NO")
+      .. " | menu entries built: " .. tostring(KOS.menuBuilt or 0))
+    local n = UnitExists("target") and KOS.FullName("target") or nil
+    say("target: " .. tostring(n) .. " | on list: " .. tostring(n and KOS:Lookup(n) ~= nil))
+    return
+  end
+
   if msg == "plates off" or msg == "plates on" then
     GoopKOSDB.platesOff = (msg == "plates off") or nil
-    say("nameplate badges " .. (GoopKOSDB.platesOff and "dried up (off)" or "gooey (on)") .. " — /reload to apply fully")
+    say("nameplate badges " .. (GoopKOSDB.platesOff and "off" or "on") .. " — /reload to apply fully")
     if KOS.RefreshNameplates then KOS:RefreshNameplates() end
     return
   end
 
   if msg == "sync off" or msg == "sync on" then
     GoopKOSDB.syncOff = (msg == "sync off") or nil
-    say("goop sharing " .. (GoopKOSDB.syncOff and "off" or "on") .. " — /reload to apply")
+    say("sharing with other GoopKOS users " .. (GoopKOSDB.syncOff and "off" or "on") .. " — /reload to apply")
     return
   end
 
   if msg == "status" then
     local channel = KOS.SyncChannel and KOS:SyncChannel()
-    say("splats: " .. #GoopKOSDB.incidents
+    say("KOS entries: " .. #GoopKOSDB.incidents
       .. " | faction: " .. tostring(UnitFactionGroup("player"))
       .. " | guild: " .. tostring(GetGuildInfo("player"))
-      .. " | sync channel: " .. (channel and ("goop channel #" .. channel) or "NOT in the goop channel"))
+      .. " | sync channel: " .. (channel and ("sharing channel #" .. channel) or "NOT connected to the sharing channel"))
     return
   end
 
@@ -417,7 +486,7 @@ SlashCmdList.GOOPKOS = function(msg)
   if msg == "add" or msg:match("^add%s") then
     local name, note = splitNameAndNote(msg:match("^add%s+(.*)$") or "")
     if not name or name == "" then
-      say('who are we gooping? /kos add Name [note]  or  /kos add "First Last" [note]')
+      say('who should be added? /kos add Name [note]  or  /kos add "First Last" [note]')
       return
     end
     KOS:Record(name, "ganked", note)
