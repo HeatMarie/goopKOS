@@ -8,11 +8,15 @@
     "watch": "pnpm --filter @goopkos/watcher start",
     "typecheck": "tsc -b --pretty",
     "addon:zip": "node scripts/addon-zip.mjs",
-    "test": "node --test addon/test/addon.test.mjs"
+    "test": "node --test addon/test/addon.test.mjs",
+    "helper:build": "node scripts/build-helper.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.9.0",
+    "esbuild": "^0.28.2",
     "fengari": "^0.1.5",
+    "fflate": "^0.8.2",
+    "postject": "1.0.0-alpha.6",
     "typescript": "^5.6.3"
   },
   "packageManager": "pnpm@9.12.3"

@@ -14,13 +14,26 @@ const code: React.CSSProperties = {
   background: "var(--field)", border: "1px solid var(--field-line)", borderRadius: 4, padding: "1px 6px", overflowWrap: "anywhere",
 };
 
-/** Download button and install steps for friends who don't have the addon yet. */
+// The installer program. Set to its path (like "/GoopKOS-Setup.exe") once it exists.
+const HELPER_ZIP: string | null = null;
+
+const option: React.CSSProperties = {
+  display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 10,
+  background: "var(--field)", border: "1px solid var(--field-line)", borderRadius: 7, padding: "14px 16px",
+};
+const primary: React.CSSProperties = {
+  background: "var(--accent-2)", color: "#00141a", textDecoration: "none",
+  borderRadius: 6, fontSize: 13, fontWeight: 600, padding: "8px 16px",
+  boxShadow: "var(--glow-2)", marginTop: "auto",
+};
+
+/** Download choices and install steps for friends who don't have the addon yet. */
 export function GetAddon({ onClose }: { onClose: () => void }) {
-  function download(e: React.MouseEvent<HTMLAnchorElement>) {
+  function open(e: React.MouseEvent<HTMLAnchorElement>, path: string) {
     // Decide now: preventDefault after an await would be too late.
     if (!inDiscord()) return;
     e.preventDefault();
-    openExternal(SITE + ZIP).catch((err) => console.error("[addon] open link failed", err));
+    openExternal(SITE + path).catch((err) => console.error("[addon] open link failed", err));
   }
 
   return (
@@ -33,29 +46,44 @@ export function GetAddon({ onClose }: { onClose: () => void }) {
       }}
     >
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-        <h2 className="micro" style={{ margin: 0, color: "var(--accent-2)" }}>Get the GoopKOS addon</h2>
-        <div style={{ display: "flex", gap: 10 }}>
-          <a
-            href={ZIP}
-            download
-            onClick={download}
-            style={{
-              background: "var(--accent-2)", color: "#00141a", textDecoration: "none",
-              borderRadius: 6, fontSize: 13, fontWeight: 600, padding: "8px 16px",
-              boxShadow: "var(--glow-2)",
-            }}
-          >
+        <h2 className="micro" style={{ margin: 0, color: "var(--accent-2)" }}>Get GoopKOS</h2>
+        <button type="button" onClick={onClose} style={{
+          background: "transparent", border: "1px solid var(--field-line)", color: "var(--text-2)",
+          borderRadius: 6, fontFamily: "var(--body)", fontSize: 13, padding: "8px 14px", cursor: "pointer",
+        }}>
+          Close
+        </button>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 12 }}>
+        <div style={option}>
+          <span className="micro" style={{ color: "var(--accent)" }}>Full program</span>
+          <p style={step}>
+            Installs the addon, keeps it up to date, and syncs your kills with the site and Discord, so
+            there&apos;s nothing to copy by hand.
+          </p>
+          {HELPER_ZIP ? (
+            <a href={HELPER_ZIP} download onClick={(e) => open(e, HELPER_ZIP)} style={primary}>
+              Download the program
+            </a>
+          ) : (
+            <span style={{ ...primary, opacity: 0.45, cursor: "not-allowed" }}>Coming soon</span>
+          )}
+        </div>
+
+        <div style={option}>
+          <span className="micro" style={{ color: "var(--accent-2)" }}>Just the addon</span>
+          <p style={step}>
+            A zip of the addon folder. You copy it in yourself, and updates are manual. Nothing else runs on
+            your PC.
+          </p>
+          <a href={ZIP} download onClick={(e) => open(e, ZIP)} style={primary}>
             Download GoopKOS v{ADDON_VERSION}
           </a>
-          <button type="button" onClick={onClose} style={{
-            background: "transparent", border: "1px solid var(--field-line)", color: "var(--text-2)",
-            borderRadius: 6, fontFamily: "var(--body)", fontSize: 13, padding: "8px 14px", cursor: "pointer",
-          }}>
-            Close
-          </button>
         </div>
       </div>
 
+      <span className="micro">Installing the zip by hand</span>
       <ol style={{ margin: 0, paddingLeft: 20, display: "flex", flexDirection: "column", gap: 8 }}>
         <li style={step}><strong>Close WoW</strong>, then download the zip above.</li>
         <li style={step}>

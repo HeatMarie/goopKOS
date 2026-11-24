@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { validateIncident, type IngestResult } from "@goopkos/core";
 import { db } from "@/lib/db";
-import { isAuthorized } from "@/lib/auth";
+import { isHelperAuthorized } from "@/lib/auth";
 import { insertIncident } from "@/lib/ingest";
 
 export const runtime = "nodejs";
@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 const MAX_BATCH = 2000;
 
 export async function POST(req: Request): Promise<NextResponse> {
-  if (!isAuthorized(req)) {
+  if (!isHelperAuthorized(req)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
@@ -69,7 +69,7 @@ export async function POST(req: Request): Promise<NextResponse> {
 
 /** Every clientId the server holds, so a watcher can rebuild its state. */
 export async function GET(req: Request): Promise<NextResponse> {
-  if (!isAuthorized(req)) {
+  if (!isHelperAuthorized(req)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 

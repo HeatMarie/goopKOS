@@ -108,27 +108,109 @@ local function label(e)
   return text
 end
 
+-- Look: flat dark panel, thin green line on top, same palette as the site.
+local FLAT = "Interface\\Buttons\\WHITE8x8"
+local WIDTH, ROW_H, HEAD_H = 280, 28, 34
+local ORANGE = "|cffff8a3d"   -- site --accent-3
+local TITLE  = "|cfff3f0ff"   -- site --text
+local CYAN   = "|cff2de2ff"   -- site --accent-2
+-- Site palette as 0-1 floats: --bg, --field, --line, --accent, --accent-2, --text-3.
+local C_BG, C_FIELD, C_LINE = { 0.04, 0.035, 0.12 }, { 0.086, 0.075, 0.216 }, { 0.165, 0.141, 0.322 }
+local C_PINK, C_CYAN, C_DIM = { 1, 0.184, 0.706 }, { 0.176, 0.886, 1 }, { 0.635, 0.612, 0.769 }
+
+--- A draggable dark panel with a green top line, a title and a close X.
+local function makePanel(globalName, width, height, title)
+  local p = CreateFrame("Frame", globalName, UIParent, "BackdropTemplate")
+  p:SetSize(width, height)
+  p:SetFrameStrata("DIALOG")
+  p:SetClampedToScreen(true)
+  p:SetMovable(true)
+  p:EnableMouse(true)
+  p:RegisterForDrag("LeftButton")
+  p:SetScript("OnDragStart", p.StartMoving)
+  p:SetScript("OnDragStop", p.StopMovingOrSizing)
+  p:SetBackdrop({ bgFile = FLAT, edgeFile = FLAT, edgeSize = 1 })
+  p:SetBackdropColor(C_BG[1], C_BG[2], C_BG[3], 0.96)
+  p:SetBackdropBorderColor(C_LINE[1], C_LINE[2], C_LINE[3], 1)
+
+  local line = p:CreateTexture(nil, "ARTWORK")
+  line:SetColorTexture(C_PINK[1], C_PINK[2], C_PINK[3], 1)
+  line:SetPoint("TOPLEFT", 1, -1)
+  line:SetPoint("TOPRIGHT", -1, -1)
+  line:SetHeight(2)
+
+  p.title = p:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+  p.title:SetPoint("TOPLEFT", 12, -11)
+  p.title:SetText(title or "")
+
+  local x = CreateFrame("Button", nil, p)
+  x:SetSize(22, 22)
+  x:SetPoint("TOPRIGHT", -5, -6)
+  x.label = x:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+  x.label:SetPoint("CENTER")
+  x.label:SetText("x")
+  x.label:SetTextColor(C_DIM[1], C_DIM[2], C_DIM[3])
+  x:SetScript("OnEnter", function(self) self.label:SetTextColor(1, 0.3, 0.43) end)   -- --danger
+  x:SetScript("OnLeave", function(self) self.label:SetTextColor(C_DIM[1], C_DIM[2], C_DIM[3]) end)
+  x:SetScript("OnClick", function() p:Hide() end)
+
+  if globalName then tinsert(UISpecialFrames, globalName) end  -- Esc closes it
+  return p
+end
+
+--- A flat button: dark fill, coloured text, lights up under the mouse.
+local function flatButton(parent, text, r, g, b)
+  local btn = CreateFrame("Button", nil, parent, "BackdropTemplate")
+  btn:SetBackdrop({ bgFile = FLAT, edgeFile = FLAT, edgeSize = 1 })
+  btn:SetBackdropColor(C_FIELD[1], C_FIELD[2], C_FIELD[3], 1)
+  btn:SetBackdropBorderColor(r * 0.7, g * 0.7, b * 0.7, 1)
+  btn.label = btn:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+  btn.label:SetPoint("CENTER")
+  btn.label:SetText(text)
+  btn.label:SetTextColor(r, g, b)
+  btn:SetScript("OnEnter", function(self) self:SetBackdropColor(r * 0.25, g * 0.25, b * 0.25, 1) end)
+  btn:SetScript("OnLeave", function(self) self:SetBackdropColor(C_FIELD[1], C_FIELD[2], C_FIELD[3], 1) end)
+  return btn
+end
+
 local win
 
 local function build()
-  win = CreateFrame("Frame", nil, UIParent, "BasicFrameTemplateWithInset")
-  win:SetSize(270, 48 + KEEP * 26)
+  win = makePanel("GoopKOSRecentWindow", WIDTH, HEAD_H + 8 + KEEP * ROW_H, "")
   win:SetPoint("CENTER", 0, 140)
-  win:SetFrameStrata("DIALOG")
-  win:SetMovable(true)
-  win:EnableMouse(true)
-  win:RegisterForDrag("LeftButton")
-  win:SetScript("OnDragStart", win.StartMoving)
-  win:SetScript("OnDragStop", win.StopMovingOrSizing)
-
-  win.heading = win:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-  win.heading:SetPoint("TOP", 0, -5)
 
   win.buttons = {}
   for i = 1, KEEP do
-    local b = CreateFrame("Button", nil, win, "UIPanelButtonTemplate")
-    b:SetSize(240, 22)
-    b:SetPoint("TOP", 0, -32 - (i - 1) * 26)
+    local b = CreateFrame("Button", nil, win)
+    b:SetSize(WIDTH - 16, ROW_H - 3)
+    b:SetPoint("TOP", 0, -HEAD_H - (i - 1) * ROW_H)
+
+    b.bg = b:CreateTexture(nil, "BACKGROUND")
+    b.bg:SetAllPoints()
+    b.bg:SetColorTexture(C_FIELD[1], C_FIELD[2], C_FIELD[3], 1)
+
+    b.hl = b:CreateTexture(nil, "HIGHLIGHT")
+    b.hl:SetAllPoints()
+    b.hl:SetColorTexture(C_CYAN[1], C_CYAN[2], C_CYAN[3], 0.16)
+
+    b.stripe = b:CreateTexture(nil, "ARTWORK")   -- class colour
+    b.stripe:SetPoint("TOPLEFT")
+    b.stripe:SetPoint("BOTTOMLEFT")
+    b.stripe:SetWidth(3)
+
+    b.level = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    b.level:SetPoint("RIGHT", -8, 0)
+    b.level:SetJustifyH("RIGHT")
+
+    b.tag = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    b.tag:SetPoint("RIGHT", b.level, "LEFT", -8, 0)
+
+    b.name = b:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    b.name:SetPoint("LEFT", 12, 0)
+    b.name:SetPoint("RIGHT", b.tag, "LEFT", -6, 0)
+    b.name:SetJustifyH("LEFT")
+    b.name:SetWordWrap(false)
+
     b:SetScript("OnClick", function(self)
       KOS:Record(self.entry.name, win.kind, nil, nil, nil, self.entry)
       win:Hide()
@@ -137,7 +219,7 @@ local function build()
   end
 
   win.empty = win:CreateFontString(nil, "OVERLAY", "GameFontDisable")
-  win.empty:SetPoint("CENTER")
+  win.empty:SetPoint("TOP", 0, -HEAD_H - 14)
   win.empty:SetText("No enemies seen yet. The goop waits.")
   win:Hide()
 end
@@ -149,11 +231,25 @@ end
 function KOS:ShowRecent(kind, maxAge, first)
   if not win then build() end
   win.kind = kind
-  win.heading:SetText(GOOP_GREEN .. (kind == "killed_me" and "Who gooped you?" or "Goop someone") .. "|r")
+  win.title:SetText(TITLE .. (kind == "killed_me" and "Who Killed You?" or "Goop someone") .. "|r")
 
   local now, n, shown = time(), 0, {}
   local list = {}
-  for _, e in ipairs(first or {}) do list[#list + 1] = e end
+  for _, e in ipairs(first or {}) do
+    -- Recap entries come from a GUID and have no level; borrow it (and the
+    -- class, if missing) from the same player in the recently-seen list.
+    if not e.level or not e.class then
+      local key = e.name:lower()
+      for _, r in ipairs(recent) do
+        if r.name:lower() == key then
+          e.level = e.level or r.level
+          e.class = e.class or r.class
+          break
+        end
+      end
+    end
+    list[#list + 1] = e
+  end
   for _, e in ipairs(recent) do list[#list + 1] = e end
   for _, e in ipairs(list) do
     if n < KEEP and not shown[e.name:lower()] and (not maxAge or (now - e.at) <= maxAge) then
@@ -161,12 +257,23 @@ function KOS:ShowRecent(kind, maxAge, first)
       n = n + 1
       local b = win.buttons[n]
       b.entry = e
-      b:SetText(label(e))
+      local c = e.class and RAID_CLASS_COLORS and RAID_CLASS_COLORS[e.class]
+      if c then
+        b.stripe:SetColorTexture(c.r, c.g, c.b, 1)
+        b.name:SetTextColor(c.r, c.g, c.b)
+      else
+        b.stripe:SetColorTexture(0.5, 0.5, 0.5, 1)
+        b.name:SetTextColor(1, 1, 1)
+      end
+      b.name:SetText(e.name)
+      b.tag:SetText(e.hitYou and (ORANGE .. "hit you|r") or "")
+      b.level:SetText(e.level and ("|cffa29cc4" .. e.level .. "|r") or "|cff5a5580?|r")
       b:Show()
     end
   end
   for i = n + 1, KEEP do win.buttons[i]:Hide() end
   win.empty:SetShown(n == 0)
+  win:SetHeight(HEAD_H + 8 + math.max(n, 2) * ROW_H)
 
   if n == 0 and maxAge then
     win:Hide()
@@ -183,38 +290,25 @@ local REVENGE_COMBAT = 15    -- seconds after leaving combat that a death still 
 local lastFight, asked, prompt = 0, {}, nil
 
 local function buildPrompt()
-  prompt = CreateFrame("Frame", nil, UIParent, "BasicFrameTemplateWithInset")
-  prompt:SetSize(270, 100)
+  prompt = makePanel("GoopKOSRevengePrompt", WIDTH, 106, CYAN .. "Revenge?|r")
   prompt:SetPoint("CENTER", 0, 240)
-  prompt:SetFrameStrata("DIALOG")
-  prompt:SetMovable(true)
-  prompt:EnableMouse(true)
-  prompt:RegisterForDrag("LeftButton")
-  prompt:SetScript("OnDragStart", prompt.StartMoving)
-  prompt:SetScript("OnDragStop", prompt.StopMovingOrSizing)
-
-  prompt.heading = prompt:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-  prompt.heading:SetPoint("TOP", 0, -5)
-  prompt.heading:SetText(GOOP_GREEN .. "Revenge?|r")
 
   prompt.text = prompt:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-  prompt.text:SetPoint("TOP", 0, -34)
-  prompt.text:SetWidth(250)
+  prompt.text:SetPoint("TOP", 0, -38)
+  prompt.text:SetWidth(WIDTH - 24)
 
-  local yes = CreateFrame("Button", nil, prompt, "UIPanelButtonTemplate")
-  yes:SetSize(118, 24)
-  yes:SetPoint("BOTTOMLEFT", 12, 10)
-  yes:SetText("Got 'em!")
+  local yes = flatButton(prompt, "Got 'em!", C_CYAN[1], C_CYAN[2], C_CYAN[3])
+  yes:SetSize(124, 26)
+  yes:SetPoint("BOTTOMLEFT", 12, 12)
   yes:SetScript("OnClick", function()
     local e = prompt.entry
     prompt:Hide()
     if e then KOS:Record(e.name, "revenge", nil, nil, nil, e) end
   end)
 
-  local no = CreateFrame("Button", nil, prompt, "UIPanelButtonTemplate")
-  no:SetSize(118, 24)
-  no:SetPoint("BOTTOMRIGHT", -12, 10)
-  no:SetText("Not me")
+  local no = flatButton(prompt, "Not me", C_DIM[1], C_DIM[2], C_DIM[3])
+  no:SetSize(124, 26)
+  no:SetPoint("BOTTOMRIGHT", -12, 12)
   no:SetScript("OnClick", function() prompt:Hide() end)
 end
 

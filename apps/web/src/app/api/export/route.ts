@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { isAuthorized } from "@/lib/auth";
+import { isHelperAuthorized } from "@/lib/auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,7 +26,7 @@ interface Row {
  * required, same as uploading.
  */
 export async function GET(req: Request): Promise<NextResponse> {
-  if (!isAuthorized(req)) {
+  if (!isHelperAuthorized(req)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
